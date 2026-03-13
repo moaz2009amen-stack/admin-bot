@@ -1,11 +1,17 @@
 """
-البوت الإداري الذكي
-====================
+البوت الإداري الذكي - النسخة المتقدمة
+========================================
 متوافق مع python-telegram-bot==21.3 + Groq
+الميزات:
+- ترحيب بالأعضاء الجدد + إرسال القوانين
+- رد تلقائي على الأسئلة في الجروب
+- رسائل مجدولة
+- أوامر إدارة عربية كاملة
 """
 
 import os
 import logging
+from datetime import time
 from groq import Groq
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import (
@@ -13,12 +19,17 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
+    ChatMemberHandler,
     ContextTypes,
     filters,
 )
 
 TOKEN = os.environ.get("TOKEN")
 GROQ_KEY = os.environ.get("GROQ_KEY")
+
+# ← ضع هنا الـ ID بتاع الجروب بتاعك
+# عشان تعرفه: ابعت رسالة في الجروب وشوف الـ chat_id في اللوج
+CHAT_ID = int(os.environ.get("CHAT_ID", "0"))
 
 if not TOKEN:
     raise ValueError("❌ مفيش TOKEN")
@@ -32,6 +43,37 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+# ==================== قوانين الجروب ====================
+# عدّل القوانين دي حسب جروبك
+قوانين_الجروب = """
+📋 *قوانين الجروب*
+
+1️⃣ الاحترام المتبادل بين الأعضاء
+2️⃣ ممنوع السب والشتيمة
+3️⃣ ممنوع الإعلانات والسبام
+4️⃣ ممنوع نشر روابط بدون إذن
+5️⃣ الالتزام بموضوع الجروب
+
+⚠️ مخالفة القوانين = تحذير، وبعد 3 تحذيرات حظر تلقائي.
+
+نتمنى لك وقتاً ممتعاً! 🎉
+"""
+
+# ==================== الرسائل المجدولة ====================
+# عدّل الرسائل والأوقات حسب احتياجك
+رسائل_مجدولة = [
+    {
+        "الوقت": time(9, 0),   # 9 الصبح كل يوم
+        "الرسالة": "🌅 *صباح الخير!*\nنتمنى لكم يوماً مليئاً بالنشاط والإنتاج 💪"
+    },
+    {
+        "الوقت": time(21, 0),  # 9 بالليل كل يوم
+        "الرسالة": "🌙 *مساء الخير!*\nشكراً لتفاعلكم اليوم، نراكم غداً إن شاء الله 🌟"
+    },
+]
+
+
+# ==================== القائمة الرئيسية ====================
 def القائمة_الرئيسية():
     أزرار = [
         [
@@ -47,13 +89,14 @@ def القائمة_الرئيسية():
             InlineKeyboardButton("🗑 مسح رسالة", callback_data="مسح"),
         ],
         [
-            InlineKeyboardButton("📊 إحصائيات", callback_data="إحصائيات"),
+            InlineKeyboardButton("📋 القوانين", callback_data="قوانين"),
             InlineKeyboardButton("❓ المساعدة", callback_data="مساعدة"),
         ],
     ]
     return InlineKeyboardMarkup(أزرار)
 
 
+# ==================== دالة التحقق من الأدمن ====================
 async def هو_ادمن(update, context):
     مستخدم = update.effective_user
     شات = update.effective_chat
@@ -63,23 +106,44 @@ async def هو_ادمن(update, context):
     return عضو_الشات.status in ["administrator", "creator"]
 
 
+# ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     رسالة = (
         "👋 *أهلاً! أنا بوتك الإداري الذكي*\n\n"
         "أقدر أساعدك في:\n"
         "🔹 حظر وكتم الأعضاء المخالفين\n"
-        "🔹 إصدار تحذيرات تلقائية\n"
-        "🔹 مسح الرسائل المزعجة\n"
-        "🔹 الرد على الأسئلة بالذكاء الاصطناعي\n\n"
+        "🔹 الترحيب بالأعضاء الجدد تلقائياً\n"
+        "🔹 الرد على الأسئلة بالذكاء الاصطناعي\n"
+        "🔹 إرسال رسائل مجدولة\n\n"
         "⚡ *أوامر الإدارة — رد على رسالة العضو واكتب:*\n"
         "حظر | فك حظر | كتم | فك كتم | تحذير | مسح\n\n"
-        "🤖 *للذكاء الاصطناعي:*\n"
-        "اذكرني في الجروب أو اسألني في الخاص\n\n"
         "اختار من القائمة 👇"
     )
     await update.message.reply_text(رسالة, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
+# ==================== ترحيب بالأعضاء الجدد ====================
+async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """بيتفعل تلقائياً لما حد ينضم للجروب"""
+    نتيجة = update.chat_member
+    عضو_جديد = نتيجة.new_chat_member.user
+    شات = update.effective_chat
+
+    # التحقق إن العضو انضم فعلاً مش اتطرد
+    if نتيجة.new_chat_member.status == "member":
+        رسالة_ترحيب = (
+            f"👋 *أهلاً وسهلاً {عضو_جديد.first_name}!*\n\n"
+            f"يسعدنا انضمامك لـ *{شات.title}* 🎉\n\n"
+            f"{قوانين_الجروب}"
+        )
+        await context.bot.send_message(
+            شات.id,
+            رسالة_ترحيب,
+            parse_mode="Markdown"
+        )
+
+
+# ==================== معالج الأزرار ====================
 async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -95,10 +159,9 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
             "🔊 *فك كتم* — لفك الكتم\n"
             "⚠️ *تحذير* — 3 تحذيرات = حظر تلقائي\n"
             "🗑 *مسح* — لمسح الرسالة\n\n"
-            "🤖 *الذكاء الاصطناعي:*\n"
-            "اذكرني @اسم_البوت أو اسألني في الخاص"
+            "📋 *القوانين* — اكتب 'القوانين' في الجروب"
         ),
-        "إحصائيات": "📊 *إحصائيات الجروب*\n\n🚧 ستكون متاحة في المرحلة الثانية",
+        "قوانين": قوانين_الجروب,
         "حظر": "🔨 *حظر عضو*\n\nرد على رسالة العضو واكتب:\n*حظر*",
         "فك_حظر": "🔓 *فك الحظر*\n\nرد على رسالة العضو واكتب:\n*فك حظر*",
         "كتم": "🔇 *كتم عضو*\n\nرد على رسالة العضو واكتب:\n*كتم*",
@@ -111,6 +174,7 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
     await query.edit_message_text(نص, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
+# ==================== معالج الرسائل ====================
 async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -119,6 +183,7 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
     الرسالة_المردود_عليها = update.message.reply_to_message
     بوت_info = await context.bot.get_me()
     اسم_البوت = f"@{بوت_info.username}"
+    في_الخاص = update.effective_chat.type == "private"
 
     # ==================== أوامر الإدارة العربية ====================
     if الرسالة_المردود_عليها and await هو_ادمن(update, context):
@@ -201,14 +266,18 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                 )
             return
 
-    # ==================== الذكاء الاصطناعي ====================
-    في_الخاص = update.effective_chat.type == "private"
-    اتذكر = اسم_البوت.lower() in نص_الرسالة.lower()
+    # ==================== القوانين ====================
+    if نص_الرسالة in ["القوانين", "قوانين", "الرولز", "rules"]:
+        await update.message.reply_text(قوانين_الجروب, parse_mode="Markdown")
+        return
 
-    if في_الخاص or اتذكر:
+    # ==================== الذكاء الاصطناعي ====================
+    اتذكر = اسم_البوت.lower() in نص_الرسالة.lower()
+    فيه_سؤال = "؟" in نص_الرسالة or "?" in نص_الرسالة
+
+    if في_الخاص or اتذكر or فيه_سؤال:
         سؤال = نص_الرسالة.replace(اسم_البوت, "").strip()
         if not سؤال:
-            await update.message.reply_text("نعم؟ 😊 كيف أساعدك؟")
             return
 
         try:
@@ -234,15 +303,42 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
             await update.message.reply_text(f"❌ حصل خطأ: {خطأ}")
 
 
+# ==================== الرسائل المجدولة ====================
+async def إرسال_رسالة_مجدولة(context: ContextTypes.DEFAULT_TYPE):
+    """بتتشغل في الوقت المحدد"""
+    if CHAT_ID == 0:
+        return
+    رسالة = context.job.data
+    await context.bot.send_message(CHAT_ID, رسالة, parse_mode="Markdown")
+
+
+# ==================== تشغيل البوت ====================
 def main():
     تطبيق = ApplicationBuilder().token(TOKEN).build()
 
+    # أوامر
     تطبيق.add_handler(CommandHandler("start", start))
+
+    # ترحيب بالأعضاء الجدد
+    تطبيق.add_handler(ChatMemberHandler(ترحيب_عضو_جديد, ChatMemberHandler.CHAT_MEMBER))
+
+    # معالج الأزرار
     تطبيق.add_handler(CallbackQueryHandler(معالج_الأزرار))
+
+    # معالج الرسائل
     تطبيق.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, معالج_الرسائل))
 
+    # جدولة الرسائل
+    if CHAT_ID != 0:
+        for رسالة_مجدولة in رسائل_مجدولة:
+            تطبيق.job_queue.run_daily(
+                إرسال_رسالة_مجدولة,
+                time=رسالة_مجدولة["الوقت"],
+                data=رسالة_مجدولة["الرسالة"],
+            )
+
     print("✅ البوت شغال...")
-    تطبيق.run_polling()
+    تطبيق.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
