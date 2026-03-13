@@ -1,12 +1,12 @@
 """
 البوت الإداري الذكي
 ====================
-متوافق مع python-telegram-bot==21.3 + OpenAI
+متوافق مع python-telegram-bot==21.3 + Groq
 """
 
 import os
 import logging
-from openai import OpenAI
+from groq import Groq
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import (
     ApplicationBuilder,
@@ -18,14 +18,14 @@ from telegram.ext import (
 )
 
 TOKEN = os.environ.get("TOKEN")
-OPENAI_KEY = os.environ.get("OPENAI_KEY")
+GROQ_KEY = os.environ.get("GROQ_KEY")
 
 if not TOKEN:
     raise ValueError("❌ مفيش TOKEN")
-if not OPENAI_KEY:
-    raise ValueError("❌ مفيش OPENAI_KEY")
+if not GROQ_KEY:
+    raise ValueError("❌ مفيش GROQ_KEY")
 
-client = OpenAI(api_key=OPENAI_KEY)
+groq_client = Groq(api_key=GROQ_KEY)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -213,8 +213,8 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
 
         try:
             await context.bot.send_chat_action(update.effective_chat.id, "typing")
-            رد = client.chat.completions.create(
-                model="gpt-4o-mini",
+            رد = groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
                 max_tokens=1000,
                 messages=[
                     {
