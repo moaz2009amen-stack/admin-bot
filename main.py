@@ -1,12 +1,12 @@
 """
 البوت الإداري الذكي
 ====================
-متوافق مع python-telegram-bot==21.3
+متوافق مع python-telegram-bot==21.3 + OpenAI
 """
 
 import os
 import logging
-import anthropic
+from openai import OpenAI
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import (
     ApplicationBuilder,
@@ -18,21 +18,20 @@ from telegram.ext import (
 )
 
 TOKEN = os.environ.get("TOKEN")
-ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY")
+OPENAI_KEY = os.environ.get("OPENAI_KEY")
 
 if not TOKEN:
     raise ValueError("❌ مفيش TOKEN")
-if not ANTHROPIC_KEY:
-    raise ValueError("❌ مفيش ANTHROPIC_KEY")
+if not OPENAI_KEY:
+    raise ValueError("❌ مفيش OPENAI_KEY")
 
-claude = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+client = OpenAI(api_key=OPENAI_KEY)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
-# ==================== القائمة الرئيسية ====================
 def القائمة_الرئيسية():
     أزرار = [
         [
@@ -55,7 +54,6 @@ def القائمة_الرئيسية():
     return InlineKeyboardMarkup(أزرار)
 
 
-# ==================== دالة التحقق من الأدمن ====================
 async def هو_ادمن(update, context):
     مستخدم = update.effective_user
     شات = update.effective_chat
@@ -65,7 +63,6 @@ async def هو_ادمن(update, context):
     return عضو_الشات.status in ["administrator", "creator"]
 
 
-# ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     رسالة = (
         "👋 *أهلاً! أنا بوتك الإداري الذكي*\n\n"
@@ -77,13 +74,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⚡ *أوامر الإدارة — رد على رسالة العضو واكتب:*\n"
         "حظر | فك حظر | كتم | فك كتم | تحذير | مسح\n\n"
         "🤖 *للذكاء الاصطناعي:*\n"
-        "اذكرني في الجروب أو اسألني مباشرة\n\n"
+        "اذكرني في الجروب أو اسألني في الخاص\n\n"
         "اختار من القائمة 👇"
     )
     await update.message.reply_text(رسالة, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
-# ==================== معالج الأزرار ====================
 async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -115,7 +111,6 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
     await query.edit_message_text(نص, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
-# ==================== معالج الرسائل العربية + AI ====================
 async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -207,7 +202,6 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
             return
 
     # ==================== الذكاء الاصطناعي ====================
-    # يرد لو في الخاص أو لو اتذكر في الجروب
     في_الخاص = update.effective_chat.type == "private"
     اتذكر = اسم_البوت.lower() in نص_الرسالة.lower()
 
@@ -219,23 +213,27 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
 
         try:
             await context.bot.send_chat_action(update.effective_chat.id, "typing")
-            رد = claude.messages.create(
-                model="claude-haiku-4-5-20251001",
+            رد = client.chat.completions.create(
+                model="gpt-4o-mini",
                 max_tokens=1000,
-                system=(
-                    "أنت مساعد ذكي في مجموعة تليجرام. "
-                    "ردودك دائماً بالعربية، مختصرة ومفيدة. "
-                    "لو سُئلت عن معلومة، أجب بدقة. "
-                    "لا تستخدم ماركداون معقد."
-                ),
-                messages=[{"role": "user", "content": سؤال}]
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "أنت مساعد ذكي في مجموعة تليجرام. "
+                            "ردودك دائماً بالعربية، مختصرة ومفيدة. "
+                            "لو سُئلت عن معلومة، أجب بدقة. "
+                            "لا تستخدم ماركداون معقد."
+                        )
+                    },
+                    {"role": "user", "content": سؤال}
+                ]
             )
-            await update.message.reply_text(رد.content[0].text)
+            await update.message.reply_text(رد.choices[0].message.content)
         except Exception as خطأ:
             await update.message.reply_text(f"❌ حصل خطأ: {خطأ}")
 
 
-# ==================== تشغيل البوت ====================
 def main():
     تطبيق = ApplicationBuilder().token(TOKEN).build()
 
