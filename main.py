@@ -1,7 +1,7 @@
 """
 البوت الإداري الذكي
 ====================
-للرفع على Railway.app
+متوافق مع python-telegram-bot==21.3
 """
 
 import os
@@ -14,20 +14,15 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# ==================== الإعدادات ====================
-# Railway بيقرأ التوكن من المتغيرات تلقائياً
 TOKEN = os.environ.get("TOKEN")
-
 if not TOKEN:
     raise ValueError("❌ مفيش TOKEN — ضيفه في Environment Variables على Railway")
 
-# ==================== اللوج ====================
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
-# ==================== القائمة الرئيسية ====================
 def القائمة_الرئيسية():
     أزرار = [
         [
@@ -50,8 +45,7 @@ def القائمة_الرئيسية():
     return InlineKeyboardMarkup(أزرار)
 
 
-# ==================== دالة مساعدة ====================
-async def هو_ادمن(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+async def هو_ادمن(update, context):
     مستخدم = update.effective_user
     شات = update.effective_chat
     if شات.type == "private":
@@ -60,7 +54,6 @@ async def هو_ادمن(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
     return عضو_الشات.status in ["administrator", "creator"]
 
 
-# ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     رسالة = (
         "👋 *أهلاً! أنا بوتك الإداري الذكي*\n\n"
@@ -77,7 +70,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(رسالة, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
-# ==================== /help ====================
 async def مساعدة(update: Update, context: ContextTypes.DEFAULT_TYPE):
     نص = (
         "📖 *دليل الاستخدام الكامل*\n\n"
@@ -95,7 +87,6 @@ async def مساعدة(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(نص, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
-# ==================== معالج الأزرار ====================
 async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -116,46 +107,18 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
             "🚧 هذه الخاصية ستكون متاحة في المرحلة الثانية\n"
             "وهتشمل: عدد المحظورين، التحذيرات، الرسائل المحذوفة"
         ),
-        "حظر": (
-            "🔨 *حظر عضو*\n\n"
-            "1️⃣ ارجع للجروب\n"
-            "2️⃣ رد على رسالة العضو\n"
-            "3️⃣ اكتب `/ban`"
-        ),
-        "فك_حظر": (
-            "🔓 *فك الحظر*\n\n"
-            "اكتب `/unban [ID العضو]`\n\n"
-            "مثال: `/unban 123456789`"
-        ),
-        "كتم": (
-            "🔇 *كتم عضو*\n\n"
-            "1️⃣ ارجع للجروب\n"
-            "2️⃣ رد على رسالة العضو\n"
-            "3️⃣ اكتب `/mute`"
-        ),
-        "فك_كتم": (
-            "🔊 *فك الكتم*\n\n"
-            "1️⃣ رد على رسالة العضو\n"
-            "2️⃣ اكتب `/unmute`"
-        ),
-        "تحذير": (
-            "⚠️ *التحذيرات*\n\n"
-            "1️⃣ رد على رسالة العضو\n"
-            "2️⃣ اكتب `/warn`\n\n"
-            "📌 بعد 3 تحذيرات → حظر تلقائي"
-        ),
-        "مسح": (
-            "🗑 *مسح رسالة*\n\n"
-            "1️⃣ رد على الرسالة المراد مسحها\n"
-            "2️⃣ اكتب `/del`"
-        ),
+        "حظر": "🔨 *حظر عضو*\n\n1️⃣ ارجع للجروب\n2️⃣ رد على رسالة العضو\n3️⃣ اكتب `/ban`",
+        "فك_حظر": "🔓 *فك الحظر*\n\nاكتب `/unban [ID العضو]`\n\nمثال: `/unban 123456789`",
+        "كتم": "🔇 *كتم عضو*\n\n1️⃣ ارجع للجروب\n2️⃣ رد على رسالة العضو\n3️⃣ اكتب `/mute`",
+        "فك_كتم": "🔊 *فك الكتم*\n\n1️⃣ رد على رسالة العضو\n2️⃣ اكتب `/unmute`",
+        "تحذير": "⚠️ *التحذيرات*\n\n1️⃣ رد على رسالة العضو\n2️⃣ اكتب `/warn`\n\n📌 بعد 3 تحذيرات → حظر تلقائي",
+        "مسح": "🗑 *مسح رسالة*\n\n1️⃣ رد على الرسالة المراد مسحها\n2️⃣ اكتب `/del`",
     }
 
     نص = نصوص.get(بيانات, "❓ أمر غير معروف")
     await query.edit_message_text(نص, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
-# ==================== أوامر الإدارة ====================
 async def حظر_عضو(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await هو_ادمن(update, context):
         await update.message.reply_text("❌ هذا الأمر للأدمن فقط.")
@@ -219,8 +182,12 @@ async def فك_كتم_عضو(update: Update, context: ContextTypes.DEFAULT_TYPE)
             عضو.id,
             permissions=ChatPermissions(
                 can_send_messages=True,
-                can_send_media_messages=True,
+                can_send_polls=True,
                 can_send_other_messages=True,
+                can_add_web_page_previews=True,
+                can_change_info=False,
+                can_invite_users=True,
+                can_pin_messages=False,
             )
         )
         await update.message.reply_text(f"🔊 تم فك كتم {عضو.first_name} بنجاح.")
@@ -274,7 +241,6 @@ async def تحذير_عضو(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
-# ==================== تشغيل البوت ====================
 def main():
     تطبيق = ApplicationBuilder().token(TOKEN).build()
 
