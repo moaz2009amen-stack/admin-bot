@@ -187,29 +187,22 @@ async def إرسال_سؤال(context: ContextTypes.DEFAULT_TYPE):
     if not أسئلة_البوت or CHAT_ID == 0:
         return
     سؤال_حالي = random.choice(أسئلة_البوت)
-    نص = (
-        f"🧠 *سؤال دراسي!*\n\n"
-        f"❓ {سؤال_حالي['سؤال']}\n\n"
-        f"أ) {سؤال_حالي['أ']}\n"
-        f"ب) {سؤال_حالي['ب']}\n"
-        f"ج) {سؤال_حالي['ج']}\n"
-        f"د) {سؤال_حالي['د']}\n\n"
-        f"⏱ عندك 60 ثانية!"
+
+    # تحديد رقم الإجابة الصحيحة (0-3)
+    خيارات = [سؤال_حالي['أ'], سؤال_حالي['ب'], سؤال_حالي['ج'], سؤال_حالي['د']]
+    حروف = ['أ', 'ب', 'ج', 'د']
+    رقم_الإجابة = حروف.index(سؤال_حالي['إجابة'])
+
+    await context.bot.send_poll(
+        chat_id=CHAT_ID,
+        question=f"🧠 {سؤال_حالي['سؤال']}",
+        options=خيارات,
+        type="quiz",
+        correct_option_id=رقم_الإجابة,
+        is_anonymous=False,
+        open_period=60,
+        explanation=f"✅ الإجابة الصحيحة: {سؤال_حالي['إجابة']}) {سؤال_حالي[سؤال_حالي['إجابة']]}",
     )
-    أزرار = [[
-        InlineKeyboardButton("أ", callback_data="إجابة_أ"),
-        InlineKeyboardButton("ب", callback_data="إجابة_ب"),
-        InlineKeyboardButton("ج", callback_data="إجابة_ج"),
-        InlineKeyboardButton("د", callback_data="إجابة_د"),
-    ]]
-    await context.bot.send_message(CHAT_ID, نص, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(أزرار))
-    context.job_queue.run_once(كشف_الإجابة, 60, data=سؤال_حالي)
-
-
-async def كشف_الإجابة(context: ContextTypes.DEFAULT_TYPE):
-    سؤال = context.job.data
-    حرف = سؤال["إجابة"]
-    await context.bot.send_message(CHAT_ID, f"✅ *الإجابة الصحيحة:*\n\n{حرف}) {سؤال[حرف]}", parse_mode="Markdown")
 
 
 # ==================== Handlers ====================
