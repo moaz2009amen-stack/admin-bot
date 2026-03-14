@@ -139,6 +139,7 @@ def قائمة_التحكم():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 إحصائيات", callback_data="ctrl_إحصائيات"), InlineKeyboardButton("❓ سؤال الآن", callback_data="ctrl_سؤال")],
         [InlineKeyboardButton("⏹ وقف الأسئلة", callback_data="ctrl_وقف"), InlineKeyboardButton("📋 القوانين", callback_data="ctrl_قوانين")],
+        [InlineKeyboardButton("🔒 قفل الجروب", callback_data="ctrl_قفل"), InlineKeyboardButton("🔓 فتح الجروب", callback_data="ctrl_فتح")],
         [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="ctrl_رئيسية")],
     ])
 
@@ -306,6 +307,28 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
         elif أمر == "قوانين":
             await query.edit_message_text(قوانين_الجروب, parse_mode="Markdown", reply_markup=قائمة_التحكم())
 
+        elif أمر == "قفل":
+            if CHAT_ID == 0:
+                await query.answer("❌ ضيف CHAT_ID في Railway!", show_alert=True)
+            else:
+                try:
+                    await context.bot.set_chat_permissions(CHAT_ID, ChatPermissions(can_send_messages=False, can_send_polls=False, can_send_other_messages=False, can_add_web_page_previews=False, can_change_info=False, can_invite_users=False, can_pin_messages=False))
+                    await context.bot.send_message(CHAT_ID, "🔒 *تم قفل الجروب مؤقتاً*", parse_mode="Markdown")
+                    await query.answer("✅ تم قفل الجروب.", show_alert=True)
+                except Exception as e:
+                    await query.answer(f"❌ فشل: {e}", show_alert=True)
+
+        elif أمر == "فتح":
+            if CHAT_ID == 0:
+                await query.answer("❌ ضيف CHAT_ID في Railway!", show_alert=True)
+            else:
+                try:
+                    await context.bot.set_chat_permissions(CHAT_ID, ChatPermissions(can_send_messages=True, can_send_polls=True, can_send_other_messages=True, can_add_web_page_previews=True, can_change_info=False, can_invite_users=True, can_pin_messages=False))
+                    await context.bot.send_message(CHAT_ID, "🔓 *تم فتح الجروب*", parse_mode="Markdown")
+                    await query.answer("✅ تم فتح الجروب.", show_alert=True)
+                except Exception as e:
+                    await query.answer(f"❌ فشل: {e}", show_alert=True)
+
         elif أمر == "رئيسية":
             await query.edit_message_text("اختار من القائمة 👇", reply_markup=القائمة_الرئيسية())
         return
@@ -423,6 +446,52 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                 return
             await إرسال_سؤال(context)
             await update.message.reply_text("✅ تم إرسال سؤال في الجروب!")
+            return
+
+        if نص in ["اقفل الجروب", "قفل الجروب"]:
+            if CHAT_ID == 0:
+                await update.message.reply_text("❌ ضيف CHAT_ID في Railway الأول!")
+                return
+            try:
+                await context.bot.set_chat_permissions(
+                    CHAT_ID,
+                    ChatPermissions(
+                        can_send_messages=False,
+                        can_send_polls=False,
+                        can_send_other_messages=False,
+                        can_add_web_page_previews=False,
+                        can_change_info=False,
+                        can_invite_users=False,
+                        can_pin_messages=False,
+                    )
+                )
+                await context.bot.send_message(CHAT_ID, "🔒 *تم قفل الجروب مؤقتاً*\nلا يمكن لأي عضو إرسال رسائل الآن.", parse_mode="Markdown")
+                await update.message.reply_text("✅ تم قفل الجروب.")
+            except Exception as e:
+                await update.message.reply_text(f"❌ فشل القفل: {e}")
+            return
+
+        if نص in ["افتح الجروب", "فتح الجروب"]:
+            if CHAT_ID == 0:
+                await update.message.reply_text("❌ ضيف CHAT_ID في Railway الأول!")
+                return
+            try:
+                await context.bot.set_chat_permissions(
+                    CHAT_ID,
+                    ChatPermissions(
+                        can_send_messages=True,
+                        can_send_polls=True,
+                        can_send_other_messages=True,
+                        can_add_web_page_previews=True,
+                        can_change_info=False,
+                        can_invite_users=True,
+                        can_pin_messages=False,
+                    )
+                )
+                await context.bot.send_message(CHAT_ID, "🔓 *تم فتح الجروب*\nيمكن للأعضاء الكلام الآن.", parse_mode="Markdown")
+                await update.message.reply_text("✅ تم فتح الجروب.")
+            except Exception as e:
+                await update.message.reply_text(f"❌ فشل الفتح: {e}")
             return
 
     # فلتر تلقائي
