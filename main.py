@@ -2,11 +2,6 @@
 البوت الإداري الذكي - النسخة المتقدمة
 ========================================
 متوافق مع python-telegram-bot==21.3 + Groq
-الميزات:
-- ترحيب بالأعضاء الجدد + إرسال القوانين
-- رد تلقائي على الأسئلة في الجروب
-- رسائل مجدولة
-- أوامر إدارة عربية كاملة
 """
 
 import os
@@ -26,10 +21,8 @@ from telegram.ext import (
 
 TOKEN = os.environ.get("TOKEN")
 GROQ_KEY = os.environ.get("GROQ_KEY")
-
-# ← ضع هنا الـ ID بتاع الجروب بتاعك
-# عشان تعرفه: ابعت رسالة في الجروب وشوف الـ chat_id في اللوج
 CHAT_ID = int(os.environ.get("CHAT_ID", "0"))
+OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 
 if not TOKEN:
     raise ValueError("❌ مفيش TOKEN")
@@ -43,8 +36,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# ==================== قوانين الجروب ====================
-# عدّل القوانين دي حسب جروبك
 قوانين_الجروب = """
 📋 *قوانين الجروب*
 
@@ -59,21 +50,18 @@ logging.basicConfig(
 نتمنى لك وقتاً ممتعاً! 🎉
 """
 
-# ==================== الرسائل المجدولة ====================
-# عدّل الرسائل والأوقات حسب احتياجك
 رسائل_مجدولة = [
     {
-        "الوقت": time(9, 0),   # 9 الصبح كل يوم
+        "الوقت": time(9, 0),
         "الرسالة": "🌅 *صباح الخير!*\nنتمنى لكم يوماً مليئاً بالنشاط والإنتاج 💪"
     },
     {
-        "الوقت": time(21, 0),  # 9 بالليل كل يوم
+        "الوقت": time(21, 0),
         "الرسالة": "🌙 *مساء الخير!*\nشكراً لتفاعلكم اليوم، نراكم غداً إن شاء الله 🌟"
     },
 ]
 
 
-# ==================== القائمة الرئيسية ====================
 def القائمة_الرئيسية():
     أزرار = [
         [
@@ -96,7 +84,6 @@ def القائمة_الرئيسية():
     return InlineKeyboardMarkup(أزرار)
 
 
-# ==================== دالة التحقق من الأدمن ====================
 async def هو_ادمن(update, context):
     مستخدم = update.effective_user
     شات = update.effective_chat
@@ -106,10 +93,25 @@ async def هو_ادمن(update, context):
     return عضو_الشات.status in ["administrator", "creator"]
 
 
-# ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    مستخدم = update.effective_user
+
+    # إشعار للأونر كل ما حد يبدأ محادثة
+    if OWNER_ID != 0 and مستخدم.id != OWNER_ID:
+        يوزر = f"@{مستخدم.username}" if مستخدم.username else "مفيش يوزرنيم"
+        إشعار = (
+            f"🆕 *مستخدم جديد بدأ محادثة!*\n\n"
+            f"👤 الاسم: {مستخدم.first_name}\n"
+            f"🔗 اليوزر: {يوزر}\n"
+            f"🆔 الـ ID: `{مستخدم.id}`"
+        )
+        try:
+            await context.bot.send_message(OWNER_ID, إشعار, parse_mode="Markdown")
+        except:
+            pass
+
     رسالة = (
-        "👋 *أهلاً! أنا بوتك الإداري الذكي*\n\n"
+        "👋 *أهلاً! أنا بووووو — بوتك الإداري الذكي*\n\n"
         "أقدر أساعدك في:\n"
         "🔹 حظر وكتم الأعضاء المخالفين\n"
         "🔹 الترحيب بالأعضاء الجدد تلقائياً\n"
@@ -122,28 +124,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(رسالة, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
-# ==================== ترحيب بالأعضاء الجدد ====================
 async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """بيتفعل تلقائياً لما حد ينضم للجروب"""
     نتيجة = update.chat_member
     عضو_جديد = نتيجة.new_chat_member.user
     شات = update.effective_chat
 
-    # التحقق إن العضو انضم فعلاً مش اتطرد
     if نتيجة.new_chat_member.status == "member":
         رسالة_ترحيب = (
             f"👋 *أهلاً وسهلاً {عضو_جديد.first_name}!*\n\n"
             f"يسعدنا انضمامك لـ *{شات.title}* 🎉\n\n"
             f"{قوانين_الجروب}"
         )
-        await context.bot.send_message(
-            شات.id,
-            رسالة_ترحيب,
-            parse_mode="Markdown"
-        )
+        await context.bot.send_message(شات.id, رسالة_ترحيب, parse_mode="Markdown")
 
 
-# ==================== معالج الأزرار ====================
 async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -174,7 +168,6 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
     await query.edit_message_text(نص, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
-# ==================== معالج الرسائل ====================
 async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -185,7 +178,6 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
     اسم_البوت = f"@{بوت_info.username}"
     في_الخاص = update.effective_chat.type == "private"
 
-    # ==================== أوامر الإدارة العربية ====================
     if الرسالة_المردود_عليها and await هو_ادمن(update, context):
         عضو = الرسالة_المردود_عليها.from_user
 
@@ -266,12 +258,10 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                 )
             return
 
-    # ==================== القوانين ====================
     if نص_الرسالة in ["القوانين", "قوانين", "الرولز", "rules"]:
         await update.message.reply_text(قوانين_الجروب, parse_mode="Markdown")
         return
 
-    # ==================== الذكاء الاصطناعي ====================
     اتذكر = اسم_البوت.lower() in نص_الرسالة.lower()
     فيه_سؤال = "؟" in نص_الرسالة or "?" in نص_الرسالة
 
@@ -279,7 +269,6 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
         سؤال = نص_الرسالة.replace(اسم_البوت, "").strip()
         if not سؤال:
             return
-
         try:
             await context.bot.send_chat_action(update.effective_chat.id, "typing")
             رد = groq_client.chat.completions.create(
@@ -291,7 +280,6 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                         "content": (
                             "أنت مساعد ذكي في مجموعة تليجرام. "
                             "ردودك دائماً بالعربية، مختصرة ومفيدة. "
-                            "لو سُئلت عن معلومة، أجب بدقة. "
                             "لا تستخدم ماركداون معقد."
                         )
                     },
@@ -303,32 +291,21 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
             await update.message.reply_text(f"❌ حصل خطأ: {خطأ}")
 
 
-# ==================== الرسائل المجدولة ====================
 async def إرسال_رسالة_مجدولة(context: ContextTypes.DEFAULT_TYPE):
-    """بتتشغل في الوقت المحدد"""
     if CHAT_ID == 0:
         return
     رسالة = context.job.data
     await context.bot.send_message(CHAT_ID, رسالة, parse_mode="Markdown")
 
 
-# ==================== تشغيل البوت ====================
 def main():
     تطبيق = ApplicationBuilder().token(TOKEN).build()
 
-    # أوامر
     تطبيق.add_handler(CommandHandler("start", start))
-
-    # ترحيب بالأعضاء الجدد
     تطبيق.add_handler(ChatMemberHandler(ترحيب_عضو_جديد, ChatMemberHandler.CHAT_MEMBER))
-
-    # معالج الأزرار
     تطبيق.add_handler(CallbackQueryHandler(معالج_الأزرار))
-
-    # معالج الرسائل
     تطبيق.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, معالج_الرسائل))
 
-    # جدولة الرسائل
     if CHAT_ID != 0:
         for رسالة_مجدولة in رسائل_مجدولة:
             تطبيق.job_queue.run_daily(
