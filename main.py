@@ -1,6 +1,6 @@
 """
-البوت الإداري الذكي - النسخة المتقدمة مع Supabase
-====================================================
+البوت الإداري الذكي - النسخة النهائية
+========================================
 متوافق مع python-telegram-bot==21.3 + Groq + Supabase
 """
 
@@ -32,16 +32,16 @@ CHAT_ID = int(os.environ.get("CHAT_ID", "0"))
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 
 if not TOKEN:
-    raise ValueError("❌ مفيش TOKEN")
+    raise ValueError("مفيش TOKEN")
 if not GROQ_KEY:
-    raise ValueError("❌ مفيش GROQ_KEY")
+    raise ValueError("مفيش GROQ_KEY")
 
 groq_client = Groq(api_key=GROQ_KEY)
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-اسم_الصانع = "معاذ أحمد أمين"
+اسم_الصانع = "Moaz"
 أسئلة_البوت = []
 سؤال_حالي = {}
 
@@ -52,17 +52,15 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
     "يلعن دينك", "يلعن ابوك", "كسم", "كسمك", "طظ", "احا", "اتنيل", "معرص", "خول", "خولة",
 ]
 
-قوانين_الجروب = """
-📋 *قوانين الجروب*
-
-1️⃣ الاحترام المتبادل بين الأعضاء
-2️⃣ ممنوع السب والشتيمة
-3️⃣ ممنوع الإعلانات والسبام
-4️⃣ ممنوع نشر روابط بدون إذن
-5️⃣ الالتزام بموضوع الجروب
-
-⚠️ مخالفة القوانين = تحذير، وبعد 3 تحذيرات حظر تلقائي.
-"""
+قوانين_الجروب = (
+    "📋 *قوانين الجروب*\n\n"
+    "1️⃣ الاحترام المتبادل بين الأعضاء\n"
+    "2️⃣ ممنوع السب والشتيمة\n"
+    "3️⃣ ممنوع الإعلانات والسبام\n"
+    "4️⃣ ممنوع نشر روابط بدون إذن\n"
+    "5️⃣ الالتزام بموضوع الجروب\n\n"
+    "⚠️ مخالفة القوانين = تحذير، وبعد 3 تحذيرات حظر تلقائي."
+)
 
 رسائل_مجدولة = [
     {"الوقت": time(6, 0), "الرسالة": "🌅 *صباح الخير!*\n\nاللهم بارك لنا في يومنا ووفقنا للمذاكرة 📚\n\n💡 كل دقيقة تذاكر فيها هي خطوة نحو نجاحك ⭐"},
@@ -71,10 +69,9 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
 ]
 
 
-# ==================== Supabase Functions ====================
+# ==================== Supabase ====================
 
 async def جيب_تحذيرات(chat_id, user_id):
-    """جيب عدد تحذيرات عضو من Supabase"""
     if not supabase:
         return 0
     try:
@@ -82,13 +79,12 @@ async def جيب_تحذيرات(chat_id, user_id):
         if result.data:
             return result.data[0]["عدد"]
         return 0
-    except Exception as خطأ:
-        logging.error(f"Supabase جيب تحذيرات: {خطأ}")
+    except Exception as e:
+        logging.error(f"جيب_تحذيرات: {e}")
         return 0
 
 
-async def حدّث_تحذيرات(chat_id, user_id, عدد):
-    """حدّث عدد تحذيرات عضو في Supabase"""
+async def حدث_تحذيرات(chat_id, user_id, عدد):
     if not supabase:
         return
     try:
@@ -97,28 +93,22 @@ async def حدّث_تحذيرات(chat_id, user_id, عدد):
             supabase.table("تحذيرات").update({"عدد": عدد}).eq("chat_id", chat_id).eq("user_id", user_id).execute()
         else:
             supabase.table("تحذيرات").insert({"chat_id": chat_id, "user_id": user_id, "عدد": عدد}).execute()
-    except Exception as خطأ:
-        logging.error(f"Supabase حدّث تحذيرات: {خطأ}")
+    except Exception as e:
+        logging.error(f"حدث_تحذيرات: {e}")
 
 
-async def سجّل_مستخدم(user_id, الاسم, يوزرنيم):
-    """سجّل مستخدم جديد في Supabase"""
+async def سجل_مستخدم(user_id, الاسم, يوزرنيم):
     if not supabase:
         return
     try:
         existing = supabase.table("مستخدمين").select("id").eq("user_id", user_id).execute()
         if not existing.data:
-            supabase.table("مستخدمين").insert({
-                "user_id": user_id,
-                "الاسم": الاسم,
-                "يوزرنيم": يوزرنيم or ""
-            }).execute()
-    except Exception as خطأ:
-        logging.error(f"Supabase سجّل مستخدم: {خطأ}")
+            supabase.table("مستخدمين").insert({"user_id": user_id, "الاسم": الاسم, "يوزرنيم": يوزرنيم or ""}).execute()
+    except Exception as e:
+        logging.error(f"سجل_مستخدم: {e}")
 
 
 async def جيب_إحصائيات():
-    """جيب إحصائيات من Supabase"""
     if not supabase:
         return None
     try:
@@ -128,79 +118,66 @@ async def جيب_إحصائيات():
             "مستخدمين": مستخدمين.count or 0,
             "محذورين": len(محذورين.data) if محذورين.data else 0,
         }
-    except Exception as خطأ:
-        logging.error(f"Supabase إحصائيات: {خطأ}")
+    except Exception as e:
+        logging.error(f"جيب_إحصائيات: {e}")
         return None
 
 
-# ==================== دوال مساعدة ====================
+# ==================== قوائم ====================
 
 def القائمة_الرئيسية():
-    أزرار = [
-        [
-            InlineKeyboardButton("🔨 حظر عضو", callback_data="حظر"),
-            InlineKeyboardButton("🔓 فك الحظر", callback_data="فك_حظر"),
-        ],
-        [
-            InlineKeyboardButton("🔇 كتم عضو", callback_data="كتم"),
-            InlineKeyboardButton("🔊 فك الكتم", callback_data="فك_كتم"),
-        ],
-        [
-            InlineKeyboardButton("⚠️ تحذير", callback_data="تحذير"),
-            InlineKeyboardButton("🗑 مسح رسالة", callback_data="مسح"),
-        ],
-        [
-            InlineKeyboardButton("📊 إحصائيات", callback_data="إحصائيات"),
-            InlineKeyboardButton("📋 القوانين", callback_data="قوانين"),
-        ],
-        [
-            InlineKeyboardButton("❓ المساعدة", callback_data="مساعدة"),
-        ],
-    ]
-    return InlineKeyboardMarkup(أزرار)
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔨 حظر عضو", callback_data="حظر"), InlineKeyboardButton("🔓 فك الحظر", callback_data="فك_حظر")],
+        [InlineKeyboardButton("🔇 كتم عضو", callback_data="كتم"), InlineKeyboardButton("🔊 فك الكتم", callback_data="فك_كتم")],
+        [InlineKeyboardButton("⚠️ تحذير", callback_data="تحذير"), InlineKeyboardButton("🗑 مسح رسالة", callback_data="مسح")],
+        [InlineKeyboardButton("📊 إحصائيات", callback_data="إحصائيات"), InlineKeyboardButton("📋 القوانين", callback_data="قوانين")],
+        [InlineKeyboardButton("❓ المساعدة", callback_data="مساعدة")],
+    ])
 
+
+def قائمة_التحكم():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 إحصائيات", callback_data="ctrl_إحصائيات"), InlineKeyboardButton("❓ سؤال الآن", callback_data="ctrl_سؤال")],
+        [InlineKeyboardButton("⏹ وقف الأسئلة", callback_data="ctrl_وقف"), InlineKeyboardButton("📋 القوانين", callback_data="ctrl_قوانين")],
+        [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="ctrl_رئيسية")],
+    ])
+
+
+# ==================== دوال مساعدة ====================
 
 async def هو_ادمن(update, context):
     مستخدم = update.effective_user
     شات = update.effective_chat
     if شات.type == "private":
         return True
-    عضو_الشات = await context.bot.get_chat_member(شات.id, مستخدم.id)
-    return عضو_الشات.status in ["administrator", "creator"]
+    عضو = await context.bot.get_chat_member(شات.id, مستخدم.id)
+    return عضو.status in ["administrator", "creator"]
 
 
 def فيه_كلمة_محظورة(نص):
     نص_صغير = نص.lower()
-    for كلمة in كلمات_محظورة:
-        if كلمة in نص_صغير:
-            return True
-    return False
+    return any(كلمة in نص_صغير for كلمة in كلمات_محظورة)
 
 
 def فيه_رابط(نص):
-    نمط = r'http[s]?://|www\.|t\.me/|bit\.ly/'
-    return bool(re.search(نمط, نص, re.IGNORECASE))
+    return bool(re.search(r'http[s]?://|www\.|t\.me/|bit\.ly/', نص, re.IGNORECASE))
 
 
-def قراءة_أسئلة_من_ملف(file_bytes):
+def قراءة_أسئلة(file_bytes):
     global أسئلة_البوت
     أسئلة_البوت = []
     try:
         wb = openpyxl.load_workbook(io.BytesIO(file_bytes))
         ws = wb.active
         for row in ws.iter_rows(min_row=2, values_only=True):
-            if row[0] and row[1] and row[2] and row[3] and row[4] and row[5]:
+            if all(row[:6]):
                 أسئلة_البوت.append({
-                    "سؤال": str(row[0]),
-                    "إجابة": str(row[1]),
-                    "أ": str(row[2]),
-                    "ب": str(row[3]),
-                    "ج": str(row[4]),
-                    "د": str(row[5]),
+                    "سؤال": str(row[0]), "إجابة": str(row[1]),
+                    "أ": str(row[2]), "ب": str(row[3]), "ج": str(row[4]), "د": str(row[5]),
                 })
         return len(أسئلة_البوت)
-    except Exception as خطأ:
-        logging.error(f"خطأ في قراءة الملف: {خطأ}")
+    except Exception as e:
+        logging.error(f"قراءة_أسئلة: {e}")
         return 0
 
 
@@ -216,7 +193,7 @@ async def إرسال_سؤال(context: ContextTypes.DEFAULT_TYPE):
         f"ب) {سؤال_حالي['ب']}\n"
         f"ج) {سؤال_حالي['ج']}\n"
         f"د) {سؤال_حالي['د']}\n\n"
-        f"⏱ عندك 60 ثانية للإجابة!"
+        f"⏱ عندك 60 ثانية!"
     )
     أزرار = [[
         InlineKeyboardButton("أ", callback_data="إجابة_أ"),
@@ -238,34 +215,42 @@ async def كشف_الإجابة(context: ContextTypes.DEFAULT_TYPE):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     مستخدم = update.effective_user
-
-    await سجّل_مستخدم(مستخدم.id, مستخدم.first_name, مستخدم.username)
+    await سجل_مستخدم(مستخدم.id, مستخدم.first_name, مستخدم.username)
 
     if OWNER_ID != 0 and مستخدم.id != OWNER_ID:
         يوزر = f"@{مستخدم.username}" if مستخدم.username else "مفيش يوزرنيم"
         try:
-            await context.bot.send_message(
-                OWNER_ID,
-                f"🆕 *مستخدم جديد!*\n\n👤 {مستخدم.first_name}\n🔗 {يوزر}\n🆔 `{مستخدم.id}`",
-                parse_mode="Markdown"
-            )
+            await context.bot.send_message(OWNER_ID, f"🆕 *مستخدم جديد!*\n\n👤 {مستخدم.first_name}\n🔗 {يوزر}\n🆔 `{مستخدم.id}`", parse_mode="Markdown")
         except:
             pass
 
     رسالة = (
         "👋 *أهلاً! أنا بووووو — بوتك الإداري الذكي*\n\n"
-        "أقدر أساعدك في:\n"
-        "🔹 حظر وكتم الأعضاء المخالفين\n"
-        "🔹 الترحيب بالأعضاء الجدد تلقائياً\n"
-        "🔹 الرد على الأسئلة بالذكاء الاصطناعي\n"
-        "🔹 فلترة الكلمات المسيئة والروابط\n"
-        "🔹 إرسال أسئلة دراسية في الجروب\n\n"
-        "⚡ *أوامر الإدارة — رد على رسالة العضو واكتب:*\n"
-        "حظر | فك حظر | كتم | فك كتم | تحذير | مسح\n\n"
-        "📚 *لرفع أسئلة:* ابعتلي ملف Excel في الخاص\n\n"
+        "🔹 حظر وكتم الأعضاء\n"
+        "🔹 ترحيب بالأعضاء الجدد\n"
+        "🔹 ذكاء اصطناعي يرد على الأسئلة\n"
+        "🔹 فلتر الكلمات والروابط\n"
+        "🔹 أسئلة دراسية في الجروب\n\n"
         "اختار من القائمة 👇"
     )
     await update.message.reply_text(رسالة, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
+
+
+async def لوحة_التحكم(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    مستخدم = update.effective_user
+    if مستخدم.id != OWNER_ID:
+        await update.message.reply_text("❌ هذه الميزة للأدمن فقط.")
+        return
+
+    إحصاء = await جيب_إحصائيات()
+    نص = (
+        "🎛 *لوحة التحكم*\n\n"
+        f"👥 المستخدمين: {إحصاء['مستخدمين'] if إحصاء else 0}\n"
+        f"⚠️ المحذّرين: {إحصاء['محذورين'] if إحصاء else 0}\n"
+        f"📚 الأسئلة: {len(أسئلة_البوت)}\n\n"
+        "اختار من الأزرار 👇"
+    )
+    await update.message.reply_text(نص, parse_mode="Markdown", reply_markup=قائمة_التحكم())
 
 
 async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -273,12 +258,8 @@ async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAU
     عضو_جديد = نتيجة.new_chat_member.user
     شات = update.effective_chat
     if نتيجة.new_chat_member.status == "member":
-        await سجّل_مستخدم(عضو_جديد.id, عضو_جديد.first_name, عضو_جديد.username)
-        await context.bot.send_message(
-            شات.id,
-            f"👋 *أهلاً وسهلاً {عضو_جديد.first_name}!*\n\nيسعدنا انضمامك لـ *{شات.title}* 🎉\n\n{قوانين_الجروب}",
-            parse_mode="Markdown"
-        )
+        await سجل_مستخدم(عضو_جديد.id, عضو_جديد.first_name, عضو_جديد.username)
+        await context.bot.send_message(شات.id, f"👋 *أهلاً {عضو_جديد.first_name}!*\n\nيسعدنا انضمامك لـ *{شات.title}* 🎉\n\n{قوانين_الجروب}", parse_mode="Markdown")
 
 
 async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -286,6 +267,7 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
     await query.answer()
     بيانات = query.data
 
+    # إجابة سؤال
     if بيانات.startswith("إجابة_"):
         حرف = بيانات.replace("إجابة_", "")
         if سؤال_حالي:
@@ -295,17 +277,48 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
                 await query.answer(f"❌ خاطئة! الصحيحة: {سؤال_حالي['إجابة']}", show_alert=True)
         return
 
+    # أزرار لوحة التحكم
+    if بيانات.startswith("ctrl_"):
+        أمر = بيانات.replace("ctrl_", "")
+
+        if أمر == "إحصائيات":
+            إحصاء = await جيب_إحصائيات()
+            نص = (
+                f"📊 *الإحصائيات*\n\n"
+                f"👥 المستخدمين: {إحصاء['مستخدمين'] if إحصاء else 0}\n"
+                f"⚠️ المحذّرين: {إحصاء['محذورين'] if إحصاء else 0}\n"
+                f"📚 الأسئلة: {len(أسئلة_البوت)}"
+            )
+            await query.edit_message_text(نص, parse_mode="Markdown", reply_markup=قائمة_التحكم())
+
+        elif أمر == "سؤال":
+            if not أسئلة_البوت:
+                await query.answer("❌ ارفع ملف الأسئلة الأول!", show_alert=True)
+            else:
+                await إرسال_سؤال(context)
+                await query.answer("✅ تم إرسال سؤال في الجروب!", show_alert=True)
+
+        elif أمر == "وقف":
+            for job in context.job_queue.get_jobs_by_name("أسئلة") + context.job_queue.get_jobs_by_name("أسئلة_يومية"):
+                job.schedule_removal()
+            await query.answer("⏹ تم وقف الأسئلة.", show_alert=True)
+
+        elif أمر == "قوانين":
+            await query.edit_message_text(قوانين_الجروب, parse_mode="Markdown", reply_markup=قائمة_التحكم())
+
+        elif أمر == "رئيسية":
+            await query.edit_message_text("اختار من القائمة 👇", reply_markup=القائمة_الرئيسية())
+        return
+
+    # أزرار القائمة الرئيسية
     if بيانات == "إحصائيات":
         إحصاء = await جيب_إحصائيات()
-        if إحصاء:
-            نص = (
-                f"📊 *إحصائيات البوت*\n\n"
-                f"👥 المستخدمين: {إحصاء['مستخدمين']}\n"
-                f"⚠️ الأعضاء المحذّرين: {إحصاء['محذورين']}\n"
-                f"📚 الأسئلة المحملة: {len(أسئلة_البوت)}"
-            )
-        else:
-            نص = "❌ مفيش بيانات دلوقتي."
+        نص = (
+            f"📊 *إحصائيات البوت*\n\n"
+            f"👥 المستخدمين: {إحصاء['مستخدمين'] if إحصاء else 0}\n"
+            f"⚠️ المحذّرين: {إحصاء['محذورين'] if إحصاء else 0}\n"
+            f"📚 الأسئلة: {len(أسئلة_البوت)}"
+        )
         await query.edit_message_text(نص, parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
         return
 
@@ -316,19 +329,15 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
             "🔨 *حظر* | 🔓 *فك حظر*\n"
             "🔇 *كتم* | 🔊 *فك كتم*\n"
             "⚠️ *تحذير* | 🗑 *مسح*\n\n"
-            "📚 *الأسئلة:* ابعت ملف Excel في الخاص\n"
-            "🕐 *الجدولة:*\n"
-            "• ابعت كل X دقيقة\n"
-            "• ابعت الساعة X\n"
-            "• ابعت سؤال\n"
-            "• وقف الأسئلة"
+            "📚 ابعت ملف Excel في الخاص للأسئلة\n"
+            "🎛 اكتب /ctrl للوحة التحكم"
         ),
         "قوانين": قوانين_الجروب,
         "حظر": "🔨 *حظر عضو*\n\nرد على رسالة العضو واكتب:\n*حظر*",
         "فك_حظر": "🔓 *فك الحظر*\n\nرد على رسالة العضو واكتب:\n*فك حظر*",
         "كتم": "🔇 *كتم عضو*\n\nرد على رسالة العضو واكتب:\n*كتم*",
         "فك_كتم": "🔊 *فك الكتم*\n\nرد على رسالة العضو واكتب:\n*فك كتم*",
-        "تحذير": "⚠️ *التحذيرات*\n\nرد على رسالة العضو واكتب:\n*تحذير*\n\n📌 بعد 3 تحذيرات → حظر تلقائي",
+        "تحذير": "⚠️ *التحذيرات*\n\nرد على رسالة العضو واكتب:\n*تحذير*\n\n📌 بعد 3 تحذيرات = حظر تلقائي",
         "مسح": "🗑 *مسح رسالة*\n\nرد على الرسالة واكتب:\n*مسح*",
     }
 
@@ -350,12 +359,11 @@ async def معالج_الملفات(update: Update, context: ContextTypes.DEFAUL
     await update.message.reply_text("⏳ جاري قراءة الأسئلة...")
     file = await context.bot.get_file(document.file_id)
     file_bytes = await file.download_as_bytearray()
-    عدد = قراءة_أسئلة_من_ملف(bytes(file_bytes))
+    عدد = قراءة_أسئلة(bytes(file_bytes))
 
     if عدد > 0:
         await update.message.reply_text(
-            f"✅ تم رفع *{عدد}* سؤال بنجاح!\n\n"
-            f"الآن قولي:\n"
+            f"✅ تم رفع *{عدد}* سؤال!\n\n"
             f"• *ابعت كل X دقيقة*\n"
             f"• *ابعت الساعة X*\n"
             f"• *ابعت سؤال* — فوراً",
@@ -369,8 +377,8 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
     if not update.message or not update.message.text:
         return
 
-    نص_الرسالة = update.message.text.strip()
-    الرسالة_المردود_عليها = update.message.reply_to_message
+    نص = update.message.text.strip()
+    رد_على = update.message.reply_to_message
     بوت_info = await context.bot.get_me()
     اسم_البوت = f"@{بوت_info.username}"
     في_الخاص = update.effective_chat.type == "private"
@@ -378,7 +386,7 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
 
     # أوامر الأونر في الخاص
     if في_الخاص and مستخدم.id == OWNER_ID:
-        match = re.match(r'ابعت كل (\d+) دقيقة', نص_الرسالة)
+        match = re.match(r'ابعت كل (\d+) دقيقة', نص)
         if match:
             دقائق = int(match.group(1))
             if not أسئلة_البوت:
@@ -390,7 +398,7 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
             await update.message.reply_text(f"✅ هيبعت سؤال كل *{دقائق}* دقيقة 🎯", parse_mode="Markdown")
             return
 
-        match = re.match(r'ابعت الساعة (\d+)', نص_الرسالة)
+        match = re.match(r'ابعت الساعة (\d+)', نص)
         if match:
             ساعة = int(match.group(1))
             if not أسئلة_البوت:
@@ -403,13 +411,13 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
             await update.message.reply_text(f"✅ هيبعت سؤال كل يوم الساعة *{ساعة}* 🎯", parse_mode="Markdown")
             return
 
-        if نص_الرسالة in ["وقف الأسئلة", "وقف", "stop"]:
+        if نص in ["وقف الأسئلة", "وقف", "stop"]:
             for job in context.job_queue.get_jobs_by_name("أسئلة") + context.job_queue.get_jobs_by_name("أسئلة_يومية"):
                 job.schedule_removal()
-            await update.message.reply_text("⏹ تم إيقاف إرسال الأسئلة.")
+            await update.message.reply_text("⏹ تم إيقاف الأسئلة.")
             return
 
-        if نص_الرسالة in ["ابعت سؤال", "سؤال الآن"]:
+        if نص in ["ابعت سؤال", "سؤال الآن"]:
             if not أسئلة_البوت:
                 await update.message.reply_text("❌ ارفع ملف الأسئلة الأول!")
                 return
@@ -419,102 +427,102 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
 
     # فلتر تلقائي
     if not في_الخاص and not await هو_ادمن(update, context):
-        if فيه_كلمة_محظورة(نص_الرسالة):
+        if فيه_كلمة_محظورة(نص):
             try:
                 await update.message.delete()
                 عدد_حالي = await جيب_تحذيرات(update.effective_chat.id, مستخدم.id)
                 عدد_جديد = عدد_حالي + 1
-                await حدّث_تحذيرات(update.effective_chat.id, مستخدم.id, عدد_جديد)
+                await حدث_تحذيرات(update.effective_chat.id, مستخدم.id, عدد_جديد)
                 if عدد_جديد >= 3:
                     await context.bot.ban_chat_member(update.effective_chat.id, مستخدم.id)
-                    await حدّث_تحذيرات(update.effective_chat.id, مستخدم.id, 0)
+                    await حدث_تحذيرات(update.effective_chat.id, مستخدم.id, 0)
                     await context.bot.send_message(update.effective_chat.id, f"🚫 تم حظر {مستخدم.first_name} تلقائياً!")
                 else:
-                    await context.bot.send_message(update.effective_chat.id, f"⚠️ {مستخدم.first_name} تحذير {عدد_جديد}/3 بسبب كلمات مسيئة.")
-            except Exception as خطأ:
-                logging.error(f"فلتر: {خطأ}")
+                    await context.bot.send_message(update.effective_chat.id, f"⚠️ {مستخدم.first_name} تحذير {عدد_جديد}/3")
+            except Exception as e:
+                logging.error(f"فلتر: {e}")
             return
 
-        if فيه_رابط(نص_الرسالة):
+        if فيه_رابط(نص):
             try:
                 await update.message.delete()
                 await context.bot.send_message(update.effective_chat.id, f"🔗 {مستخدم.first_name} ممنوع نشر الروابط!")
-            except Exception as خطأ:
-                logging.error(f"روابط: {خطأ}")
+            except Exception as e:
+                logging.error(f"روابط: {e}")
             return
 
     # أوامر الإدارة
-    if الرسالة_المردود_عليها and await هو_ادمن(update, context):
-        عضو = الرسالة_المردود_عليها.from_user
+    if رد_على and await هو_ادمن(update, context):
+        عضو = رد_على.from_user
 
-        if نص_الرسالة == "حظر":
+        if نص == "حظر":
             try:
                 await context.bot.ban_chat_member(update.effective_chat.id, عضو.id)
                 await update.message.reply_text(f"🔨 تم حظر {عضو.first_name}.")
-            except Exception as خطأ:
-                await update.message.reply_text(f"❌ {خطأ}")
+            except Exception as e:
+                await update.message.reply_text(f"❌ {e}")
             return
 
-        elif نص_الرسالة == "فك حظر":
+        elif نص == "فك حظر":
             try:
                 await context.bot.unban_chat_member(update.effective_chat.id, عضو.id)
                 await update.message.reply_text(f"🔓 تم فك الحظر عن {عضو.first_name}.")
-            except Exception as خطأ:
-                await update.message.reply_text(f"❌ {خطأ}")
+            except Exception as e:
+                await update.message.reply_text(f"❌ {e}")
             return
 
-        elif نص_الرسالة == "كتم":
+        elif نص == "كتم":
             try:
                 await context.bot.restrict_chat_member(update.effective_chat.id, عضو.id, permissions=ChatPermissions(can_send_messages=False))
                 await update.message.reply_text(f"🔇 تم كتم {عضو.first_name}.")
-            except Exception as خطأ:
-                await update.message.reply_text(f"❌ {خطأ}")
+            except Exception as e:
+                await update.message.reply_text(f"❌ {e}")
             return
 
-        elif نص_الرسالة == "فك كتم":
+        elif نص == "فك كتم":
             try:
                 await context.bot.restrict_chat_member(
                     update.effective_chat.id, عضو.id,
                     permissions=ChatPermissions(can_send_messages=True, can_send_polls=True, can_send_other_messages=True, can_add_web_page_previews=True, can_change_info=False, can_invite_users=True, can_pin_messages=False)
                 )
                 await update.message.reply_text(f"🔊 تم فك كتم {عضو.first_name}.")
-            except Exception as خطأ:
-                await update.message.reply_text(f"❌ {خطأ}")
+            except Exception as e:
+                await update.message.reply_text(f"❌ {e}")
             return
 
-        elif نص_الرسالة == "مسح":
+        elif نص == "مسح":
             try:
-                await الرسالة_المردود_عليها.delete()
+                await رد_على.delete()
                 await update.message.delete()
-            except Exception as خطأ:
-                await update.message.reply_text(f"❌ {خطأ}")
+            except Exception as e:
+                await update.message.reply_text(f"❌ {e}")
             return
 
-        elif نص_الرسالة == "تحذير":
+        elif نص == "تحذير":
             عدد_حالي = await جيب_تحذيرات(update.effective_chat.id, عضو.id)
             عدد_جديد = عدد_حالي + 1
-            await حدّث_تحذيرات(update.effective_chat.id, عضو.id, عدد_جديد)
+            await حدث_تحذيرات(update.effective_chat.id, عضو.id, عدد_جديد)
             if عدد_جديد >= 3:
                 try:
                     await context.bot.ban_chat_member(update.effective_chat.id, عضو.id)
-                    await حدّث_تحذيرات(update.effective_chat.id, عضو.id, 0)
+                    await حدث_تحذيرات(update.effective_chat.id, عضو.id, 0)
                     await update.message.reply_text(f"🚫 تم حظر {عضو.first_name} بعد 3 تحذيرات!")
-                except Exception as خطأ:
-                    await update.message.reply_text(f"❌ {خطأ}")
+                except Exception as e:
+                    await update.message.reply_text(f"❌ {e}")
             else:
                 await update.message.reply_text(f"⚠️ تحذير {عدد_جديد}/3 لـ {عضو.first_name}")
             return
 
-    if نص_الرسالة in ["القوانين", "قوانين", "rules"]:
+    if نص in ["القوانين", "قوانين", "rules"]:
         await update.message.reply_text(قوانين_الجروب, parse_mode="Markdown")
         return
 
     # الذكاء الاصطناعي
-    اتذكر = اسم_البوت.lower() in نص_الرسالة.lower()
-    فيه_سؤال = "؟" in نص_الرسالة or "?" in نص_الرسالة
+    اتذكر = اسم_البوت.lower() in نص.lower()
+    فيه_سؤال = "؟" in نص or "?" in نص
 
     if في_الخاص or اتذكر or فيه_سؤال:
-        سؤال_نص = نص_الرسالة.replace(اسم_البوت, "").strip()
+        سؤال_نص = نص.replace(اسم_البوت, "").strip()
         if not سؤال_نص:
             return
         try:
@@ -526,18 +534,17 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                     {
                         "role": "system",
                         "content": (
-                            f"أنت مساعد ذكي اسمك بووووو، تم تطويرك وبرمجتك بواسطة {اسم_الصانع}. "
-                            f"لو سألك أي شخص 'مين صنعك' أو 'مين برمجك'، قل إن الذي صنعك هو {اسم_الصانع}. "
-                            "أنت مساعد في مجموعة تليجرام دراسية للصف الثاني الثانوي. "
-                            "ردودك دائماً بالعربية، مختصرة ومفيدة."
+                            f"أنت مساعد ذكي اسمك بووووو، صنعك {اسم_الصانع}. "
+                            f"لو سألك أي شخص مين صنعك، قول إن اللي صنعك هو {اسم_الصانع}. "
+                            "أنت في جروب دراسي للصف الثاني الثانوي. ردودك بالعربية، مختصرة ومفيدة."
                         )
                     },
                     {"role": "user", "content": سؤال_نص}
                 ]
             )
             await update.message.reply_text(رد.choices[0].message.content)
-        except Exception as خطأ:
-            await update.message.reply_text(f"❌ حصل خطأ: {خطأ}")
+        except Exception as e:
+            await update.message.reply_text(f"❌ حصل خطأ: {e}")
 
 
 async def إرسال_رسالة_مجدولة(context: ContextTypes.DEFAULT_TYPE):
@@ -550,6 +557,7 @@ def main():
     تطبيق = ApplicationBuilder().token(TOKEN).build()
 
     تطبيق.add_handler(CommandHandler("start", start))
+    تطبيق.add_handler(CommandHandler("ctrl", لوحة_التحكم))
     تطبيق.add_handler(ChatMemberHandler(ترحيب_عضو_جديد, ChatMemberHandler.CHAT_MEMBER))
     تطبيق.add_handler(CallbackQueryHandler(معالج_الأزرار))
     تطبيق.add_handler(MessageHandler(filters.Document.ALL, معالج_الملفات))
