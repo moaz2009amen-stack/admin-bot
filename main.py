@@ -586,6 +586,10 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
         await update.message.reply_text(قوانين_الجروب, parse_mode="Markdown")
         return
 
+    if نص == "chat_id" and await هو_ادمن(update, context):
+        await update.message.reply_text(f"🆔 الـ Chat ID: `{update.effective_chat.id}`", parse_mode="Markdown")
+        return
+
     # الذكاء الاصطناعي
     اتذكر = اسم_البوت.lower() in نص.lower()
     فيه_سؤال = "؟" in نص or "?" in نص
