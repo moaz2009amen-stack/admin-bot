@@ -23,7 +23,7 @@ groq_client = Groq(api_key=GROQ_KEY)
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-اسم_الصانع = "Moaz"
+اسم_الصانع = "Moaz(@Almoo5m)"
 أسئلة_البوت = []
 سؤال_حالي = {}
 معسكر_info = {"اسم_المادة": "", "كل_دقايق": 1}
@@ -166,7 +166,7 @@ async def بدء_المعسكر(context: ContextTypes.DEFAULT_TYPE):
         f"📚 *المادة:* {info['اسم_المادة']}\n"
         f"📝 *عدد الأسئلة:* {info['عدد_أسئلة']} سؤال\n"
         f"⏱️ *سؤال كل:* {info['كل_دقايق']} دقيقة\n"
-        "🕐 *مدة الإجابة:* 24 ساعة لكل سؤال\n\n"
+        "🕐 *مدة الإجابة:* 10 دقائق لكل سؤال\n\n"
         "🤲 *دعاء طلب العلم:*\n"
         "اللهم علمنا ما ينفعنا، وانفعنا بما علمتنا،\n"
         "وزدنا علماً، وارزقنا فهماً وحفظاً\n\n"
