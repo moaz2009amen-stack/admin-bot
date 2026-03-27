@@ -35,7 +35,7 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
     "🌟 *كل لحظة مذاكرة هي استثمار في مستقبلك!*\n💡 الذكاء يصنع بالمجهود",
     "🚀 *أنت في الطريق الصح!*\n📖 اللي بيذاكر دلوقتي بيحصد غداً",
     "💎 *العلم كنز لا يسرق!*\n🎓 اجتهد وتوكل على الله",
-    "🌈 *النجاح حلم + عمل + إيمان!*\n⚡ انت قادر تحقق كل حاجة",
+    " *النجاح حلم + عمل + إيمان!*\n⚡ انت قادر تحقق كل حاجة",
     "🏆 *المتفوقون اجتهدوا!*\n💫 إجتهادك هيفرق",
 ]
 
@@ -98,6 +98,24 @@ async def سجل_مستخدم(user_id, الاسم, يوزرنيم):
         if not e.data:
             supabase.table("مستخدمين").insert({"user_id": user_id, "الاسم": الاسم, "يوزرنيم": يوزرنيم or ""}).execute()
     except: pass
+
+async def سجل_جروب(chat_id, اسم):
+    if not supabase: return
+    try:
+        e = supabase.table("جروبات").select("id").eq("chat_id", chat_id).execute()
+        if not e.data:
+            supabase.table("جروبات").insert({"chat_id": chat_id, "اسم": اسم}).execute()
+        else:
+            supabase.table("جروبات").update({"اسم": اسم}).eq("chat_id", chat_id).execute()
+    except Exception as e:
+        logging.error(f"سجل_جروب: {e}")
+
+async def جيب_كل_الجروبات():
+    if not supabase: return []
+    try:
+        r = supabase.table("جروبات").select("*").execute()
+        return r.data or []
+    except: return []
 
 async def جيب_إحصائيات():
     if not supabase: return None
@@ -166,7 +184,7 @@ async def بدء_المعسكر(context: ContextTypes.DEFAULT_TYPE):
         f"📚 *المادة:* {info['اسم_المادة']}\n"
         f"📝 *عدد الأسئلة:* {info['عدد_أسئلة']} سؤال\n"
         f"⏱️ *سؤال كل:* {info['كل_دقايق']} دقيقة\n"
-        "🕐 *مدة الإجابة:* 10 دقائق لكل سؤال\n\n"
+        "🕐 *مدة الإجابة:* 10 دقايق  لكل سؤال\n\n"
         "🤲 *دعاء طلب العلم:*\n"
         "اللهم علمنا ما ينفعنا، وانفعنا بما علمتنا،\n"
         "وزدنا علماً، وارزقنا فهماً وحفظاً\n\n"
@@ -241,6 +259,14 @@ async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAU
     ن = update.chat_member
     ع = ن.new_chat_member.user
     ش = update.effective_chat
+    # تسجيل الجروب لو البوت اتضاف
+    if ن.new_chat_member.user.id == (await context.bot.get_me()).id:
+        await سجل_جروب(ش.id, ش.title or "جروب")
+        if OWNER_ID != 0:
+            try:
+                await context.bot.send_message(OWNER_ID, f"➕ *البوت اتضاف لجروب جديد!*\n\n📛 {ش.title}\n🆔 `{ش.id}`", parse_mode="Markdown")
+            except: pass
+        return
     if ن.new_chat_member.status == "member":
         await سجل_مستخدم(ع.id, ع.first_name, ع.username)
         await context.bot.send_message(ش.id, f"👋 *أهلاً {ع.first_name}!*\n\nيسعدنا انضمامك 🎉\n\n{قوانين_الجروب}", parse_mode="Markdown")
