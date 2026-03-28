@@ -23,10 +23,13 @@ groq_client = Groq(api_key=GROQ_KEY)
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-اسم_الصانع = "Moaz(@Almoo5m)"
+اسم_الصانع = "Moaz"
 أسئلة_البوت = []
 سؤال_حالي = {}
 معسكر_info = {"اسم_المادة": "", "كل_دقايق": 1}
+إحصائيات_معسكر = {"أسئلة_بُعتت": 0}
+index_سؤال = 0
+أسئلة_مخلوطة = []
 
 رسائل_تحفيزية = [
     "💪 *استمر! كل سؤال بتجاوبه هو خطوة نحو النجاح!*\n✨ العلم نور والجهل ظلام",
@@ -35,7 +38,7 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
     "🌟 *كل لحظة مذاكرة هي استثمار في مستقبلك!*\n💡 الذكاء يصنع بالمجهود",
     "🚀 *أنت في الطريق الصح!*\n📖 اللي بيذاكر دلوقتي بيحصد غداً",
     "💎 *العلم كنز لا يسرق!*\n🎓 اجتهد وتوكل على الله",
-    " *النجاح حلم + عمل + إيمان!*\n⚡ انت قادر تحقق كل حاجة",
+    "🌈 *النجاح حلم + عمل + إيمان!*\n⚡ انت قادر تحقق كل حاجة",
     "🏆 *المتفوقون اجتهدوا!*\n💫 إجتهادك هيفرق",
 ]
 
@@ -74,6 +77,7 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
 ]
 
 
+# ==================== Supabase ====================
 async def جيب_تحذيرات(chat_id, user_id):
     if not supabase: return 0
     try:
@@ -107,8 +111,8 @@ async def سجل_جروب(chat_id, اسم):
             supabase.table("جروبات").insert({"chat_id": chat_id, "اسم": اسم}).execute()
         else:
             supabase.table("جروبات").update({"اسم": اسم}).eq("chat_id", chat_id).execute()
-    except Exception as e:
-        logging.error(f"سجل_جروب: {e}")
+    except Exception as ex:
+        logging.error(f"سجل_جروب: {ex}")
 
 async def جيب_كل_الجروبات():
     if not supabase: return []
@@ -126,6 +130,7 @@ async def جيب_إحصائيات():
     except: return None
 
 
+# ==================== قوائم ====================
 def القائمة_الرئيسية():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔨 حظر", callback_data="حظر"), InlineKeyboardButton("🔓 فك الحظر", callback_data="فك_حظر")],
@@ -144,6 +149,7 @@ def قائمة_التحكم():
     ])
 
 
+# ==================== دوال مساعدة ====================
 async def هو_ادمن(update, context):
     م = update.effective_user
     ش = update.effective_chat
@@ -176,6 +182,7 @@ def قراءة_أسئلة(file_bytes):
         return 0
 
 
+# ==================== دوال المعسكر ====================
 async def بدء_المعسكر(context: ContextTypes.DEFAULT_TYPE):
     if CHAT_ID == 0: return
     info = context.job.data
@@ -184,7 +191,7 @@ async def بدء_المعسكر(context: ContextTypes.DEFAULT_TYPE):
         f"📚 *المادة:* {info['اسم_المادة']}\n"
         f"📝 *عدد الأسئلة:* {info['عدد_أسئلة']} سؤال\n"
         f"⏱️ *سؤال كل:* {info['كل_دقايق']} دقيقة\n"
-        "🕐 *مدة الإجابة:* 10 دقايق  لكل سؤال\n\n"
+        "🕐 *مدة الإجابة:* 10 دقائق لكل سؤال\n\n"
         "🤲 *دعاء طلب العلم:*\n"
         "اللهم علمنا ما ينفعنا، وانفعنا بما علمتنا،\n"
         "وزدنا علماً، وارزقنا فهماً وحفظاً\n\n"
@@ -213,12 +220,23 @@ async def إرسال_ذكر(context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(CHAT_ID, random.choice(أذكار), parse_mode="Markdown")
 
 async def إرسال_سؤال(context: ContextTypes.DEFAULT_TYPE):
-    global سؤال_حالي
+    global سؤال_حالي, index_سؤال, إحصائيات_معسكر
     if not أسئلة_البوت or CHAT_ID == 0: return
-    سؤال_حالي = random.choice(أسئلة_البوت)
+    # لو خلصت الأسئلة وقف المعسكر
+    if index_سؤال >= len(أسئلة_مخلوطة):
+        for job in context.job_queue.get_jobs_by_name("أسئلة"):
+            job.schedule_removal()
+        context.job_queue.run_once(نهاية_المعسكر, 2, data={})
+        return
+    سؤال_حالي = أسئلة_مخلوطة[index_سؤال]
+    index_سؤال += 1
+    إحصائيات_معسكر["أسئلة_بُعتت"] += 1
     خيارات = [سؤال_حالي['أ'], سؤال_حالي['ب'], سؤال_حالي['ج'], سؤال_حالي['د']]
     حروف = ['أ', 'ب', 'ج', 'د']
     رقم = حروف.index(سؤال_حالي['إجابة'])
+    شرح = f"✅ {سؤال_حالي['إجابة']}) {سؤال_حالي[سؤال_حالي['إجابة']]}"
+    if سؤال_حالي.get('شرح'):
+        شرح += f"\n\n💡 {سؤال_حالي['شرح']}"
     await context.bot.send_poll(
         chat_id=CHAT_ID,
         question=f"🧠 {سؤال_حالي['سؤال']}",
@@ -226,11 +244,12 @@ async def إرسال_سؤال(context: ContextTypes.DEFAULT_TYPE):
         type="quiz",
         correct_option_id=رقم,
         is_anonymous=False,
-        open_period=86400,
-        explanation=f"الإجابة: {سؤال_حالي['إجابة']}) {سؤال_حالي[سؤال_حالي['إجابة']]}",
+        open_period=600,
+        explanation=شرح,
     )
 
 
+# ==================== Handlers ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     م = update.effective_user
     await سجل_مستخدم(م.id, م.first_name, م.username)
@@ -240,7 +259,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(OWNER_ID, f"🆕 *مستخدم جديد!*\n\n👤 {م.first_name}\n🔗 {ي}\n🆔 `{م.id}`", parse_mode="Markdown")
         except: pass
     await update.message.reply_text(
-        "👋 *أهلاً! أنا بووووو*\n\n🔹 إدارة الأعضاء\n🔹 ذكاء اصطناعي\n🔹 معسكرات أسئلة\n\naختار من القائمة 👇",
+        "👋 *أهلاً! أنا بووووو*\n\n🔹 إدارة الأعضاء\n🔹 ذكاء اصطناعي بالمصري\n🔹 معسكرات أسئلة\n\nاختار من القائمة 👇",
         parse_mode="Markdown", reply_markup=القائمة_الرئيسية()
     )
 
@@ -251,7 +270,7 @@ async def لوحة_التحكم(update: Update, context: ContextTypes.DEFAULT_TY
         return
     إحصاء = await جيب_إحصائيات()
     await update.message.reply_text(
-        f"🎛 *لوحة التحكم*\n\n👥 المستخدمين: {إحصاء['مستخدمين'] if إحصاء else 0}\n⚠️ المحذّرين: {إحصاء['محذورين'] if إحصاء else 0}\n📚 الأسئلة: {len(أسئلة_البوت)}",
+        f"🎛 *لوحة التحكم*\n\n👥 المستخدمين: {إحصاء['مستخدمين'] if إحصاء else 0}\n⚠️ المحذّرين: {إحصاء['محذورين'] if إحصاء else 0}\n📚 الأسئلة: {len(أسئلة_البوت)}\n✅ أسئلة اتبعتت: {إحصائيات_معسكر['أسئلة_بُعتت']}",
         parse_mode="Markdown", reply_markup=قائمة_التحكم()
     )
 
@@ -259,7 +278,6 @@ async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAU
     ن = update.chat_member
     ع = ن.new_chat_member.user
     ش = update.effective_chat
-    # تسجيل الجروب لو البوت اتضاف
     if ن.new_chat_member.user.id == (await context.bot.get_me()).id:
         await سجل_جروب(ش.id, ش.title or "جروب")
         if OWNER_ID != 0:
@@ -281,7 +299,7 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
         if أمر == "إحصائيات":
             إحصاء = await جيب_إحصائيات()
             await query.edit_message_text(
-                f"📊 *الإحصائيات*\n\n👥 {إحصاء['مستخدمين'] if إحصاء else 0}\n⚠️ {إحصاء['محذورين'] if إحصاء else 0}\n📚 {len(أسئلة_البوت)}",
+                f"📊 *الإحصائيات*\n\n👥 المستخدمين: {إحصاء['مستخدمين'] if إحصاء else 0}\n⚠️ المحذّرين: {إحصاء['محذورين'] if إحصاء else 0}\n📚 الأسئلة: {len(أسئلة_البوت)}\n✅ أسئلة بُعتت: {إحصائيات_معسكر['أسئلة_بُعتت']}",
                 parse_mode="Markdown", reply_markup=قائمة_التحكم()
             )
         elif أمر == "سؤال":
@@ -381,6 +399,7 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
 
         # انتظار الوقت
         if context.user_data.get('انتظر_وقت') and نص.isdigit():
+            global index_سؤال, أسئلة_مخلوطة, إحصائيات_معسكر
             دقائق = int(نص)
             معسكر_info['كل_دقايق'] = دقائق
             context.user_data['انتظر_وقت'] = False
@@ -389,6 +408,12 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
             for job in context.job_queue.get_jobs_by_name("أسئلة") + context.job_queue.get_jobs_by_name("تحفيز") + context.job_queue.get_jobs_by_name("أذكار"):
                 job.schedule_removal()
 
+            # تهيئة الأسئلة بدون تكرار
+            أسئلة_مخلوطة = أسئلة_البوت.copy()
+            random.shuffle(أسئلة_مخلوطة)
+            index_سؤال = 0
+            إحصائيات_معسكر = {"أسئلة_بُعتت": 0}
+
             context.job_queue.run_once(بدء_المعسكر, 5, data={'اسم_المادة': معسكر_info['اسم_المادة'], 'عدد_أسئلة': عدد, 'كل_دقايق': دقائق})
             context.job_queue.run_repeating(إرسال_سؤال, interval=دقائق * 60, first=15, name="أسئلة")
             context.job_queue.run_repeating(إرسال_تحفيز, interval=دقائق * 60 * 2, first=دقائق * 60, name="تحفيز")
@@ -396,6 +421,55 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
 
             await update.message.reply_text(
                 f"🏕️ *المعسكر جاهز!*\n\n📚 {معسكر_info['اسم_المادة']}\n⏱️ سؤال كل {دقائق} دقيقة\n🤲 أذكار كل 15 دقيقة\n\nسيبدأ خلال ثواني 🚀",
+                parse_mode="Markdown"
+            )
+            return
+
+        # بعت للكل
+        if نص.startswith("بعت للكل:"):
+            رسالة_عامة = نص.replace("بعت للكل:", "").strip()
+            if not رسالة_عامة:
+                await update.message.reply_text("❌ اكتب الرسالة بعد : مثلاً:\nبعت للكل: أهلاً بالجميع")
+                return
+            if not supabase:
+                await update.message.reply_text("❌ Supabase مش شغال")
+                return
+            await update.message.reply_text("⏳ جاري الإرسال...")
+            try:
+                users = supabase.table("مستخدمين").select("user_id").execute()
+                نجح = 0
+                فشل = 0
+                for user in (users.data or []):
+                    try:
+                        await context.bot.send_message(user["user_id"], رسالة_عامة, parse_mode="Markdown")
+                        نجح += 1
+                    except:
+                        فشل += 1
+                await update.message.reply_text(f"✅ تم الإرسال!\n\n📤 نجح: {نجح}\n❌ فشل: {فشل}")
+            except Exception as e:
+                await update.message.reply_text(f"❌ خطأ: {e}")
+            return
+
+        # جروبات البوت
+        if نص in ["جروباتي", "جروبات البوت"]:
+            جروبات = await جيب_كل_الجروبات()
+            if not جروبات:
+                await update.message.reply_text("❌ البوت مش في أي جروب دلوقتي")
+                return
+            نص_جروبات = "📋 *الجروبات اللي البوت فيها:*\n\n"
+            for i, ج in enumerate(جروبات, 1):
+                نص_جروبات += f"{i}. {ج.get('اسم', 'بدون اسم')} — `{ج['chat_id']}`\n"
+            await update.message.reply_text(نص_جروبات, parse_mode="Markdown")
+            return
+
+        # إحصائيات المعسكر
+        if نص in ["إحصائيات المعسكر", "كام سؤال", "احصائيات"]:
+            متبقي = len(أسئلة_مخلوطة) - index_سؤال
+            await update.message.reply_text(
+                f"📊 *إحصائيات المعسكر*\n\n"
+                f"✅ أسئلة اتبعتت: {إحصائيات_معسكر['أسئلة_بُعتت']}\n"
+                f"📚 إجمالي الأسئلة: {len(أسئلة_مخلوطة)}\n"
+                f"⏳ متبقي: {متبقي} سؤال",
                 parse_mode="Markdown"
             )
             return
@@ -543,7 +617,7 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
         await update.message.reply_text(f"🆔 Chat ID: `{update.effective_chat.id}`", parse_mode="Markdown")
         return
 
-    # ذكاء اصطناعي
+    # ذكاء اصطناعي بالمصري
     اتذكر = اسم_البوت.lower() in نص.lower()
     فيه_سؤال = "؟" in نص or "?" in نص
 
@@ -556,7 +630,7 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                 model="llama-3.3-70b-versatile",
                 max_tokens=1000,
                 messages=[
-                    {"role": "system", "content": f"أنت مساعد ذكي اسمك بووووو، صنعك {اسم_الصانع}. أجب دائماً بالعربية بشكل مختصر ومفيد."},
+                    {"role": "system", "content": f"أنت مساعد ذكي اسمك بووووو، صنعك {اسم_الصانع}. لازم تتكلم بالعامية المصرية دايماً، ردودك خفيفة وودودة ومفيدة. لو حد سألك مين صنعك قوله {اسم_الصانع}. لو في سؤال دراسي جاوبه بدقة بالعامية المصرية."},
                     {"role": "user", "content": س}
                 ]
             )
