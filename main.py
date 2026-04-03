@@ -19,7 +19,7 @@ groq_client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-اسم_الصانع = "Moaz"
+اسم_الصانع = "Moaz{@Almoo5m}"
 
 # بيانات المعسكرات لكل جروب
 معسكرات = {}  # {chat_id: {...}}
