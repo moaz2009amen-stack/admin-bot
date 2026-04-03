@@ -552,7 +552,7 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
                     "1️⃣ ابعت المبلغ على فودافون كاش\n"
                     "2️⃣ ابعت إيصال الدفع للأدمن\n"
                     "3️⃣ سيتم التفعيل خلال ساعة\n\n"
-                    "📱 *رقم فودافون كاش:* اضف رقمك هنا\n\n"
+                    "📱 *رقم فودافون كاش:*01065631855\n\n"
                     "✅ تم إرسال طلبك للأدمن!",
                     parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data=f"grp_إحصائيات_{chat_id}")]])
