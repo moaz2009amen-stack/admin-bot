@@ -1,7 +1,7 @@
 import os, re, io, logging, random
-from datetime import time
 from groq import Groq
 import openpyxl
+from datetime import time
 from supabase import create_client
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import (
@@ -15,14 +15,16 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 
+OWNER_USERNAME = "@Almoo5m"
+VODAFONE_NUMBER = "01065631855"
+سعر_الاشتراك = {"قيمة": 0, "العملة": "جنيه"}  # يتحدد من لوحة التحكم
+
 groq_client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 اسم_الصانع = "Moaz{@Almoo5m}"
-
-# بيانات المعسكرات لكل جروب
-معسكرات = {}  # {chat_id: {...}}
+معسكرات = {}
 
 رسائل_تحفيزية = [
     "💪 *استمر! كل سؤال بتجاوبه هو خطوة نحو النجاح!*\n✨ العلم نور والجهل ظلام",
@@ -31,8 +33,6 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
     "🌟 *كل لحظة مذاكرة هي استثمار في مستقبلك!*\n💡 الذكاء يصنع بالمجهود",
     "🚀 *أنت في الطريق الصح!*\n📖 اللي بيذاكر دلوقتي بيحصد غداً",
     "💎 *العلم كنز لا يسرق!*\n🎓 اجتهد وتوكل على الله",
-    "🌈 *النجاح حلم + عمل + إيمان!*\n⚡ انت قادر تحقق كل حاجة",
-    "🏆 *المتفوقون اجتهدوا!*\n💫 إجتهادك هيفرق",
 ]
 
 أذكار = [
@@ -40,10 +40,7 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
     "🌸 *سبحان الله وبحمده*\n✨ سبحان الله العظيم",
     "💚 *استغفر الله العظيم وأتوب إليه*\n🌿 اللهم اغفر لي وتب علي",
     "⭐ *الحمد لله على كل حال*\n🌟 الحمد لله الذي بنعمته تتم الصالحات",
-    "🤍 *لا إله إلا الله محمد رسول الله*\n💫 لا إله إلا أنت سبحانك",
     "🌙 *اللهم اجعل علمنا نافعاً*\n📚 اللهم علمنا ما ينفعنا",
-    "💛 *اللهم أعنا على ذكرك وشكرك*\n🌺 ربنا آتنا في الدنيا حسنة",
-    "🌹 *اللهم بارك لنا في أوقاتنا*\n✨ اللهم وفقنا لما تحب وترضى",
 ]
 
 كلمات_محظورة = [
@@ -61,6 +58,39 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
     "4️⃣ ممنوع نشر روابط بدون اذن\n"
     "5️⃣ الالتزام بموضوع الجروب\n\n"
     "مخالفة القوانين = تحذير، وبعد 3 تحذيرات حظر تلقائي."
+)
+
+دليل_المستخدم = (
+    "📖 *دليل استخدام بووووو الكامل*\n\n"
+    "━━━━━━━━━━━━━━━━━━\n"
+    "🆓 *الميزات المجانية:*\n"
+    "━━━━━━━━━━━━━━━━━━\n\n"
+    "👮 *إدارة الأعضاء:*\n"
+    "رد على رسالة العضو واكتب:\n"
+    "• `حظر` — حظر العضو\n"
+    "• `فك حظر` — فك الحظر\n"
+    "• `كتم` — منع العضو من الكلام\n"
+    "• `فك كتم` — إرجاع الكلام\n"
+    "• `تحذير` — تحذير (3 تحذيرات = حظر تلقائي)\n"
+    "• `مسح` — مسح الرسالة\n\n"
+    "📚 *معسكرات الأسئلة:*\n"
+    "• ارفع ملف Excel في الجروب\n"
+    "• اكتب اسم المادة\n"
+    "• اكتب كل كام دقيقة تبعت سؤال\n"
+    "• البوت يبعت أسئلة تلقائي!\n\n"
+    "🔧 *أوامر مفيدة:*\n"
+    "• `قوانين` — عرض قوانين الجروب\n"
+    "• `chat_id` — معرفة ID الجروب\n\n"
+    "━━━━━━━━━━━━━━━━━━\n"
+    "💎 *الميزات البريميوم (AI):*\n"
+    "━━━━━━━━━━━━━━━━━━\n\n"
+    "🤖 *الذكاء الاصطناعي:*\n"
+    "• اذكر اسم البوت في الجروب\n"
+    "• أو اكتب سؤال بعلامة ؟\n"
+    "• البوت يجاوب بالعامية المصرية!\n\n"
+    "━━━━━━━━━━━━━━━━━━\n"
+    "🎛 *التحكم في الجروب من هنا:*\n"
+    "اضغط الزرار أدناه واختار جروبك 👇"
 )
 
 
@@ -97,9 +127,16 @@ async def سجل_جروب(chat_id, اسم, owner_id):
         if not e.data:
             supabase.table("جروبات").insert({"chat_id": chat_id, "اسم": اسم, "owner_id": owner_id}).execute()
         else:
-            supabase.table("جروبات").update({"اسم": اسم}).eq("chat_id", chat_id).execute()
+            supabase.table("جروبات").update({"اسم": اسم, "owner_id": owner_id}).eq("chat_id", chat_id).execute()
     except Exception as ex:
         logging.error(f"سجل_جروب: {ex}")
+
+async def جيب_جروبات_المستخدم(user_id):
+    if not supabase: return []
+    try:
+        r = supabase.table("جروبات").select("*").eq("owner_id", user_id).execute()
+        return r.data or []
+    except: return []
 
 async def جيب_owner_id(chat_id):
     if not supabase: return None
@@ -111,10 +148,30 @@ async def جيب_owner_id(chat_id):
 async def ai_مفعل_للجروب(chat_id):
     if not supabase: return False
     try:
-        owner = await جيب_owner_id(chat_id)
-        if not owner: return False
-        r = supabase.table("اشتراكات").select("ai_مفعل").eq("user_id", owner).eq("chat_id", chat_id).execute()
-        return r.data[0]["ai_مفعل"] if r.data else False
+        r = supabase.table("اشتراكات").select("ai_مفعل").eq("chat_id", chat_id).execute()
+        if r.data:
+            return bool(r.data[0]["ai_مفعل"])
+        return False
+    except: return False
+
+async def فعّل_ai(user_id, chat_id):
+    if not supabase: return False
+    try:
+        e = supabase.table("اشتراكات").select("id").eq("chat_id", chat_id).execute()
+        if e.data:
+            supabase.table("اشتراكات").update({"ai_مفعل": True, "user_id": user_id}).eq("chat_id", chat_id).execute()
+        else:
+            supabase.table("اشتراكات").insert({"user_id": user_id, "chat_id": chat_id, "ai_مفعل": True}).execute()
+        return True
+    except Exception as ex:
+        logging.error(f"فعّل_ai: {ex}")
+        return False
+
+async def وقف_ai(chat_id):
+    if not supabase: return False
+    try:
+        supabase.table("اشتراكات").update({"ai_مفعل": False}).eq("chat_id", chat_id).execute()
+        return True
     except: return False
 
 async def جيب_طلبات_الاشتراك():
@@ -124,24 +181,6 @@ async def جيب_طلبات_الاشتراك():
         return r.data or []
     except: return []
 
-async def فعّل_ai(user_id, chat_id):
-    if not supabase: return False
-    try:
-        e = supabase.table("اشتراكات").select("id").eq("user_id", user_id).eq("chat_id", chat_id).execute()
-        if e.data:
-            supabase.table("اشتراكات").update({"ai_مفعل": True}).eq("user_id", user_id).eq("chat_id", chat_id).execute()
-        else:
-            supabase.table("اشتراكات").insert({"user_id": user_id, "chat_id": chat_id, "ai_مفعل": True}).execute()
-        return True
-    except: return False
-
-async def وقف_ai(user_id, chat_id):
-    if not supabase: return False
-    try:
-        supabase.table("اشتراكات").update({"ai_مفعل": False}).eq("user_id", user_id).eq("chat_id", chat_id).execute()
-        return True
-    except: return False
-
 async def جيب_كل_الجروبات():
     if not supabase: return []
     try:
@@ -150,7 +189,7 @@ async def جيب_كل_الجروبات():
     except: return []
 
 async def جيب_إحصائيات():
-    if not supabase: return None
+    if not supabase: return {}
     try:
         م = supabase.table("مستخدمين").select("*", count="exact").execute()
         ح = supabase.table("تحذيرات").select("*").gte("عدد", 1).execute()
@@ -162,34 +201,39 @@ async def جيب_إحصائيات():
             "جروبات": ج.count or 0,
             "مشتركين_ai": len(اش.data) if اش.data else 0,
         }
-    except: return None
+    except: return {}
 
 
 # ==================== قوائم ====================
-def القائمة_الرئيسية():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔨 حظر", callback_data="حظر"), InlineKeyboardButton("🔓 فك الحظر", callback_data="فك_حظر")],
-        [InlineKeyboardButton("🔇 كتم", callback_data="كتم"), InlineKeyboardButton("🔊 فك الكتم", callback_data="فك_كتم")],
-        [InlineKeyboardButton("⚠️ تحذير", callback_data="تحذير"), InlineKeyboardButton("🗑 مسح", callback_data="مسح")],
-        [InlineKeyboardButton("📊 إحصائيات", callback_data="إحصائيات"), InlineKeyboardButton("📋 القوانين", callback_data="قوانين")],
-        [InlineKeyboardButton("❓ المساعدة", callback_data="مساعدة")],
-    ])
-
 def قائمة_سوبر_أدمن():
+    سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}" if سعر_الاشتراك['قيمة'] else "غير محدد"
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 إحصائيات كاملة", callback_data="super_إحصائيات")],
-        [InlineKeyboardButton("🏘 الجروبات", callback_data="super_جروبات")],
-        [InlineKeyboardButton("🔔 طلبات AI", callback_data="super_طلبات")],
-        [InlineKeyboardButton("📢 إعلان للكل", callback_data="super_إعلان")],
+        [InlineKeyboardButton("📊 إحصائيات", callback_data="super_إحصائيات"), InlineKeyboardButton("🏘 الجروبات", callback_data="super_جروبات")],
+        [InlineKeyboardButton("🔔 طلبات AI", callback_data="super_طلبات"), InlineKeyboardButton("📢 إعلان للكل", callback_data="super_إعلان")],
+        [InlineKeyboardButton(f"💰 السعر: {سعر_نص}", callback_data="super_سعر")],
     ])
 
-def قائمة_تحكم_جروب(chat_id):
+def قائمة_جروبات_المستخدم(جروبات):
+    أزرار = []
+    for ج in جروبات:
+        أزرار.append([InlineKeyboardButton(f"🏘 {ج.get('اسم', 'جروب')}", callback_data=f"myjrp_{ج['chat_id']}")])
+    أزرار.append([InlineKeyboardButton("🔄 تحديث", callback_data="my_جروبات")])
+    return InlineKeyboardMarkup(أزرار)
+
+def قائمة_تحكم_جروب(chat_id, اسم="الجروب"):
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("❓ سؤال الآن", callback_data=f"grp_سؤال_{chat_id}"), InlineKeyboardButton("⏹ وقف المعسكر", callback_data=f"grp_وقف_{chat_id}")],
         [InlineKeyboardButton("📊 إحصائيات", callback_data=f"grp_إحصائيات_{chat_id}"), InlineKeyboardButton("📋 القوانين", callback_data=f"grp_قوانين_{chat_id}")],
         [InlineKeyboardButton("🔒 قفل الجروب", callback_data=f"grp_قفل_{chat_id}"), InlineKeyboardButton("🔓 فتح الجروب", callback_data=f"grp_فتح_{chat_id}")],
         [InlineKeyboardButton("🤖 اشتراك AI 💎", callback_data=f"grp_ai_{chat_id}")],
-        [InlineKeyboardButton("🔙 رجوع", callback_data="رئيسية")],
+        [InlineKeyboardButton("🔙 جروباتي", callback_data="my_جروبات")],
+    ])
+
+def القائمة_الرئيسية_مستخدم():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏘 جروباتي", callback_data="my_جروبات")],
+        [InlineKeyboardButton("📖 دليل الاستخدام", callback_data="دليل")],
+        [InlineKeyboardButton("💎 اشتراك AI", callback_data="اشتراك_ai")],
     ])
 
 
@@ -237,27 +281,19 @@ def جيب_بيانات_جروب(chat_id):
 # ==================== دوال المعسكر ====================
 async def بدء_المعسكر(context: ContextTypes.DEFAULT_TYPE):
     data = context.job.data
-    chat_id = data["chat_id"]
-    رسالة = (
-        "🏕️ *معسكر أسئلة جديد!*\n\n"
-        f"📚 *المادة:* {data['اسم_المادة']}\n"
+    await context.bot.send_message(
+        data["chat_id"],
+        f"🏕️ *معسكر أسئلة جديد!*\n\n📚 *المادة:* {data['اسم_المادة']}\n"
         f"📝 *عدد الأسئلة:* {data['عدد_أسئلة']} سؤال\n"
-        f"⏱️ *سؤال كل:* {data['كل_دقايق']} دقيقة\n"
-        "🕐 *مدة الإجابة:* 10 دقائق لكل سؤال\n\n"
-        "🤲 *دعاء طلب العلم:*\n"
-        "اللهم علمنا ما ينفعنا، وانفعنا بما علمتنا،\n"
-        "وزدنا علماً، وارزقنا فهماً وحفظاً\n\n"
-        "يلا نذاكر! 💪🔥"
+        f"⏱️ *سؤال كل:* {data['كل_دقايق']} دقيقة\n\n"
+        "🤲 اللهم علمنا ما ينفعنا وانفعنا بما علمتنا\n\nيلا نذاكر! 💪🔥",
+        parse_mode="Markdown"
     )
-    await context.bot.send_message(chat_id, رسالة, parse_mode="Markdown")
 
 async def نهاية_المعسكر(context: ContextTypes.DEFAULT_TYPE):
-    chat_id = context.job.data["chat_id"]
     await context.bot.send_message(
-        chat_id,
-        "🏆 *انتهى المعسكر!*\n\nبارك الله فيكم 🌟\n\n"
-        "🤲 اللهم اجعل ما تعلمناه نافعاً\n\n"
-        "الحمد لله الذي بنعمته تتم الصالحات 🌹",
+        context.job.data["chat_id"],
+        "🏆 *انتهى المعسكر!*\n\nبارك الله فيكم 🌟\n\n🤲 اللهم اجعل ما تعلمناه نافعاً\n\nالحمد لله الذي بنعمته تتم الصالحات 🌹",
         parse_mode="Markdown"
     )
 
@@ -300,55 +336,79 @@ async def إرسال_سؤال(context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     م = update.effective_user
     await سجل_مستخدم(م.id, م.first_name, م.username)
+
     if م.id == OWNER_ID:
         إحصاء = await جيب_إحصائيات()
+        سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}" if سعر_الاشتراك['قيمة'] else "غير محدد"
         await update.message.reply_text(
             f"👑 *أهلاً يا Moaz!*\n\n"
-            f"👥 المستخدمين: {إحصاء['مستخدمين'] if إحصاء else 0}\n"
-            f"🏘 الجروبات: {إحصاء['جروبات'] if إحصاء else 0}\n"
-            f"🤖 مشتركين AI: {إحصاء['مشتركين_ai'] if إحصاء else 0}",
+            f"👥 المستخدمين: {إحصاء.get('مستخدمين', 0)}\n"
+            f"🏘 الجروبات: {إحصاء.get('جروبات', 0)}\n"
+            f"🤖 مشتركين AI: {إحصاء.get('مشتركين_ai', 0)}\n"
+            f"💰 سعر الاشتراك: {سعر_نص}",
             parse_mode="Markdown", reply_markup=قائمة_سوبر_أدمن()
         )
         return
+
+    # إشعار للأونر
     if OWNER_ID != 0:
         ي = f"@{م.username}" if م.username else "مفيش يوزرنيم"
         try:
             await context.bot.send_message(OWNER_ID, f"🆕 *مستخدم جديد!*\n\n👤 {م.first_name}\n🔗 {ي}\n🆔 `{م.id}`", parse_mode="Markdown")
         except: pass
-    await update.message.reply_text(
-        "👋 *أهلاً! أنا بووووو*\n\n"
-        "🔹 إدارة الأعضاء — مجاناً\n"
-        "🔹 فلتر تلقائي — مجاناً\n"
-        "🔹 معسكرات أسئلة — مجاناً\n"
-        "🤖 ذكاء اصطناعي — بريميوم 💎\n\n"
-        "ضيفني في جروبك واكتب /ctrl 👇",
-        parse_mode="Markdown", reply_markup=القائمة_الرئيسية()
+
+    # جيب جروبات المستخدم
+    جروبات = await جيب_جروبات_المستخدم(م.id)
+    سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}" if سعر_الاشتراك['قيمة'] else ""
+
+    رسالة = (
+        f"👋 *أهلاً {م.first_name}! أنا بووووو* 🤖\n\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "🆓 *مجاناً:* إدارة أعضاء + فلتر + أسئلة\n"
+        f"💎 *بريميوم:* ذكاء اصطناعي{f' ({سعر_نص}/شهر)' if سعر_نص else ''}\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "اختار من القائمة 👇"
     )
+
+    if جروبات:
+        await update.message.reply_text(رسالة, parse_mode="Markdown", reply_markup=قائمة_جروبات_المستخدم(جروبات))
+    else:
+        await update.message.reply_text(
+            رسالة + "\n\n⚠️ *ضيف البوت في جروبك الأول عشان تقدر تتحكم فيه من هنا*",
+            parse_mode="Markdown",
+            reply_markup=القائمة_الرئيسية_مستخدم()
+        )
 
 async def ctrl(update: Update, context: ContextTypes.DEFAULT_TYPE):
     م = update.effective_user
     ش = update.effective_chat
+
+    # السوبر أدمن في الخاص
     if م.id == OWNER_ID and ش.type == "private":
         إحصاء = await جيب_إحصائيات()
         await update.message.reply_text(
             f"👑 *لوحة السوبر أدمن*\n\n"
-            f"👥 {إحصاء['مستخدمين'] if إحصاء else 0} مستخدم\n"
-            f"🏘 {إحصاء['جروبات'] if إحصاء else 0} جروب\n"
-            f"🤖 {إحصاء['مشتركين_ai'] if إحصاء else 0} مشترك AI",
+            f"👥 {إحصاء.get('مستخدمين', 0)} مستخدم\n"
+            f"🏘 {إحصاء.get('جروبات', 0)} جروب\n"
+            f"🤖 {إحصاء.get('مشتركين_ai', 0)} مشترك AI",
             parse_mode="Markdown", reply_markup=قائمة_سوبر_أدمن()
         )
         return
-    if ش.type == "private":
-        await update.message.reply_text("❌ الأمر ده بيشتغل في الجروب بس.")
+
+    # في الجروب
+    if ش.type != "private":
+        if not await هو_ادمن(update, context):
+            await update.message.reply_text("❌ للأدمن فقط.")
+            return
+        await update.message.reply_text(
+            f"🎛 *لوحة تحكم {ش.title}*\n\nارفع ملف Excel للأسئلة هنا 👇",
+            parse_mode="Markdown",
+            reply_markup=قائمة_تحكم_جروب(ش.id, ش.title)
+        )
         return
-    if not await هو_ادمن(update, context):
-        await update.message.reply_text("❌ للأدمن فقط.")
-        return
-    await update.message.reply_text(
-        f"🎛 *لوحة تحكم الجروب*\n📛 {ش.title}\n\nارفع ملف Excel للأسئلة هنا 👇",
-        parse_mode="Markdown",
-        reply_markup=قائمة_تحكم_جروب(ش.id)
-    )
+
+    # مستخدم عادي في الخاص
+    await update.message.reply_text("استخدم /start للتحكم في جروباتك 👇")
 
 async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ن = update.chat_member
@@ -368,6 +428,17 @@ async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAU
                 await context.bot.send_message(
                     OWNER_ID,
                     f"➕ *جروب جديد!*\n\n📛 {ش.title}\n🆔 `{ش.id}`\n👤 الأونر: `{owner_id}`",
+                    parse_mode="Markdown"
+                )
+            except: pass
+        # إرسال الدليل للأونر في الخاص
+        if owner_id:
+            try:
+                await context.bot.send_message(
+                    owner_id,
+                    f"🎉 *تم إضافة بووووو في {ش.title}!*\n\n"
+                    "دلوقتي تقدر تتحكم في الجروب من هنا مباشرة 👇\n\n"
+                    "اكتب /start لتشغيل لوحة التحكم",
                     parse_mode="Markdown"
                 )
             except: pass
@@ -406,12 +477,14 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
         أمر = بيانات.replace("super_", "")
         if أمر == "إحصائيات":
             إحصاء = await جيب_إحصائيات()
+            سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}" if سعر_الاشتراك['قيمة'] else "غير محدد"
             await query.edit_message_text(
                 f"📊 *إحصائيات كاملة*\n\n"
-                f"👥 المستخدمين: {إحصاء['مستخدمين'] if إحصاء else 0}\n"
-                f"🏘 الجروبات: {إحصاء['جروبات'] if إحصاء else 0}\n"
-                f"⚠️ المحذّرين: {إحصاء['محذورين'] if إحصاء else 0}\n"
-                f"🤖 مشتركين AI: {إحصاء['مشتركين_ai'] if إحصاء else 0}",
+                f"👥 المستخدمين: {إحصاء.get('مستخدمين', 0)}\n"
+                f"🏘 الجروبات: {إحصاء.get('جروبات', 0)}\n"
+                f"⚠️ المحذّرين: {إحصاء.get('محذورين', 0)}\n"
+                f"🤖 مشتركين AI: {إحصاء.get('مشتركين_ai', 0)}\n"
+                f"💰 سعر الاشتراك: {سعر_نص}",
                 parse_mode="Markdown", reply_markup=قائمة_سوبر_أدمن()
             )
         elif أمر == "جروبات":
@@ -433,22 +506,30 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
             for ط in طلبات:
                 نص += f"👤 `{ط['user_id']}` — جروب `{ط['chat_id']}`\n"
                 أزرار.append([
-                    InlineKeyboardButton(f"✅ فعّل", callback_data=f"activate_{ط['user_id']}_{ط['chat_id']}"),
-                    InlineKeyboardButton(f"❌ ارفض", callback_data=f"reject_{ط['user_id']}_{ط['chat_id']}"),
+                    InlineKeyboardButton("✅ فعّل", callback_data=f"activate_{ط['user_id']}_{ط['chat_id']}"),
+                    InlineKeyboardButton("❌ ارفض", callback_data=f"reject_{ط['user_id']}_{ط['chat_id']}"),
                 ])
             أزرار.append([InlineKeyboardButton("🔙 رجوع", callback_data="super_رئيسية")])
             await query.edit_message_text(نص, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(أزرار))
         elif أمر == "إعلان":
             context.user_data["انتظر_إعلان"] = True
             await query.edit_message_text(
-                "📢 *اكتب نص الإعلان:*",
+                "📢 *اكتب نص الإعلان:*\nسيُرسل لكل المستخدمين",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="super_رئيسية")]])
+            )
+        elif أمر == "سعر":
+            context.user_data["انتظر_سعر"] = True
+            await query.edit_message_text(
+                "💰 *اكتب سعر الاشتراك الشهري:*\n\nمثال: `50 جنيه` أو `5 دولار`",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ إلغاء", callback_data="super_رئيسية")]])
             )
         elif أمر == "رئيسية":
             إحصاء = await جيب_إحصائيات()
+            سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}" if سعر_الاشتراك['قيمة'] else "غير محدد"
             await query.edit_message_text(
-                f"👑 *لوحة السوبر أدمن*\n\n👥 {إحصاء['مستخدمين'] if إحصاء else 0} مستخدم\n🏘 {إحصاء['جروبات'] if إحصاء else 0} جروب\n🤖 {إحصاء['مشتركين_ai'] if إحصاء else 0} مشترك AI",
+                f"👑 *لوحة السوبر أدمن*\n\n👥 {إحصاء.get('مستخدمين',0)} مستخدم\n🏘 {إحصاء.get('جروبات',0)} جروب\n🤖 {إحصاء.get('مشتركين_ai',0)} مشترك AI\n💰 السعر: {سعر_نص}",
                 parse_mode="Markdown", reply_markup=قائمة_سوبر_أدمن()
             )
         return
@@ -459,18 +540,105 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
         user_id, chat_id = int(parts[1]), int(parts[2])
         if await فعّل_ai(user_id, chat_id):
             try:
-                await context.bot.send_message(user_id, "🎉 *تم تفعيل AI في جروبك!*\n\nالأعضاء يقدروا يستخدموا الذكاء الاصطناعي دلوقتي 🤖", parse_mode="Markdown")
+                await context.bot.send_message(
+                    user_id,
+                    "🎉 *تم تفعيل الذكاء الاصطناعي في جروبك!*\n\n"
+                    "الأعضاء دلوقتي يقدروا يستخدموا AI 🤖\n"
+                    "اذكر اسم البوت أو اكتب سؤال بـ ؟",
+                    parse_mode="Markdown"
+                )
             except: pass
             await query.answer("✅ تم التفعيل!", show_alert=True)
+        else:
+            await query.answer("❌ فشل التفعيل!", show_alert=True)
         return
 
     if بيانات.startswith("reject_") and م.id == OWNER_ID:
         parts = بيانات.split("_")
         user_id = int(parts[1])
         try:
-            await context.bot.send_message(user_id, "❌ *تم رفض طلب الاشتراك*\n\nللاستفسار تواصل مع الدعم.", parse_mode="Markdown")
+            await context.bot.send_message(
+                user_id,
+                f"❌ *تم رفض طلب الاشتراك*\n\nللاستفسار تواصل مع {OWNER_USERNAME}",
+                parse_mode="Markdown"
+            )
         except: pass
         await query.answer("تم الرفض", show_alert=True)
+        return
+
+    # ===== جروبات المستخدم =====
+    if بيانات == "my_جروبات":
+        جروبات = await جيب_جروبات_المستخدم(م.id)
+        if not جروبات:
+            await query.edit_message_text(
+                "❌ *مش لاقي جروبات ليك*\n\nضيف البوت في جروبك الأول!",
+                parse_mode="Markdown",
+                reply_markup=القائمة_الرئيسية_مستخدم()
+            )
+            return
+        await query.edit_message_text(
+            "🏘 *جروباتك:*\n\nاختار الجروب اللي عايز تتحكم فيه 👇",
+            parse_mode="Markdown",
+            reply_markup=قائمة_جروبات_المستخدم(جروبات)
+        )
+        return
+
+    if بيانات.startswith("myjrp_"):
+        chat_id = int(بيانات.replace("myjrp_", ""))
+        # التحقق إن المستخدم فعلاً أونر الجروب ده
+        owner = await جيب_owner_id(chat_id)
+        if owner != م.id and م.id != OWNER_ID:
+            await query.answer("❌ مش أونر الجروب ده!", show_alert=True)
+            return
+        # جيب اسم الجروب
+        try:
+            chat_info = await context.bot.get_chat(chat_id)
+            اسم = chat_info.title or "الجروب"
+        except:
+            اسم = "الجروب"
+        await query.edit_message_text(
+            f"🎛 *لوحة تحكم {اسم}*\n\nاختار الأمر 👇",
+            parse_mode="Markdown",
+            reply_markup=قائمة_تحكم_جروب(chat_id, اسم)
+        )
+        return
+
+    # ===== دليل الاستخدام =====
+    if بيانات == "دليل":
+        جروبات = await جيب_جروبات_المستخدم(م.id)
+        await query.edit_message_text(
+            دليل_المستخدم,
+            parse_mode="Markdown",
+            reply_markup=قائمة_جروبات_المستخدم(جروبات) if جروبات else القائمة_الرئيسية_مستخدم()
+        )
+        return
+
+    # ===== طلب اشتراك AI من الخاص =====
+    if بيانات == "اشتراك_ai":
+        سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}/شهر" if سعر_الاشتراك['قيمة'] else "تواصل مع الأدمن"
+        if supabase:
+            try:
+                e = supabase.table("اشتراكات").select("id").eq("user_id", م.id).execute()
+                if not e.data:
+                    supabase.table("اشتراكات").insert({"user_id": م.id, "chat_id": 0, "الاسم": م.first_name, "ai_مفعل": False}).execute()
+            except: pass
+        try:
+            ي = f"@{م.username}" if م.username else "مفيش يوزرنيم"
+            await context.bot.send_message(
+                OWNER_ID,
+                f"💰 *طلب اشتراك AI جديد!*\n\n👤 {م.first_name}\n🔗 {ي}\n🆔 `{م.id}`",
+                parse_mode="Markdown"
+            )
+        except: pass
+        await query.edit_message_text(
+            f"💎 *اشتراك الذكاء الاصطناعي*\n\n"
+            f"💰 السعر: {سعر_نص}\n\n"
+            f"📱 *ابعت على فودافون كاش:*\n`{VODAFONE_NUMBER}`\n\n"
+            f"بعد الدفع تواصل مع {OWNER_USERNAME} وابعتله إيصال الدفع\n\n"
+            "✅ سيتم التفعيل خلال ساعة",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="my_جروبات")]])
+        )
         return
 
     # ===== تحكم الجروب =====
@@ -479,13 +647,16 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
         أمر = parts[0]
         chat_id = int(parts[1]) if len(parts) > 1 else None
         if not chat_id: return
-        try:
-            عضو = await context.bot.get_chat_member(chat_id, م.id)
-            if عضو.status not in ["administrator", "creator"] and م.id != OWNER_ID:
-                await query.answer("❌ مش أدمن في الجروب ده!", show_alert=True)
-                return
-        except:
-            if م.id != OWNER_ID:
+
+        # التحقق من الصلاحية
+        owner = await جيب_owner_id(chat_id)
+        if م.id != owner and م.id != OWNER_ID:
+            try:
+                عضو = await context.bot.get_chat_member(chat_id, م.id)
+                if عضو.status not in ["administrator", "creator"]:
+                    await query.answer("❌ مش أدمن في الجروب ده!", show_alert=True)
+                    return
+            except:
                 await query.answer("❌ مش قادر أتحقق", show_alert=True)
                 return
 
@@ -493,23 +664,30 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
 
         if أمر == "إحصائيات":
             await query.edit_message_text(
-                f"📊 *إحصائيات المعسكر*\n\n✅ بُعتت: {بيانات_جروب['إحصائيات']['أسئلة_بُعتت']}\n📚 إجمالي: {len(بيانات_جروب['مخلوطة'])}\n⏳ متبقي: {len(بيانات_جروب['مخلوطة']) - بيانات_جروب['index']}",
+                f"📊 *إحصائيات المعسكر*\n\n"
+                f"✅ بُعتت: {بيانات_جروب['إحصائيات']['أسئلة_بُعتت']}\n"
+                f"📚 إجمالي: {len(بيانات_جروب['مخلوطة'])}\n"
+                f"⏳ متبقي: {len(بيانات_جروب['مخلوطة']) - بيانات_جروب['index']}",
                 parse_mode="Markdown", reply_markup=قائمة_تحكم_جروب(chat_id)
             )
         elif أمر == "سؤال":
             if not بيانات_جروب["أسئلة"]:
-                await query.answer("❌ ارفع ملف الأسئلة الأول!", show_alert=True)
+                await query.answer("❌ ارفع ملف الأسئلة الأول في الجروب!", show_alert=True)
             else:
                 context.job_queue.run_once(إرسال_سؤال, 1, data={"chat_id": chat_id}, name=f"فوري_{chat_id}")
                 await query.answer("✅ تم إرسال سؤال!", show_alert=True)
         elif أمر == "وقف":
-            for job in (context.job_queue.get_jobs_by_name(f"أسئلة_{chat_id}") + context.job_queue.get_jobs_by_name(f"تحفيز_{chat_id}") + context.job_queue.get_jobs_by_name(f"أذكار_{chat_id}")):
+            for job in (
+                context.job_queue.get_jobs_by_name(f"أسئلة_{chat_id}") +
+                context.job_queue.get_jobs_by_name(f"تحفيز_{chat_id}") +
+                context.job_queue.get_jobs_by_name(f"أذكار_{chat_id}")
+            ):
                 job.schedule_removal()
             context.job_queue.run_once(نهاية_المعسكر, 2, data={"chat_id": chat_id}, name=f"نهاية_{chat_id}")
             await query.answer("✅ تم إنهاء المعسكر.", show_alert=True)
         elif أمر == "قوانين":
             await context.bot.send_message(chat_id, قوانين_الجروب, parse_mode="Markdown")
-            await query.answer("✅ تم الإرسال", show_alert=True)
+            await query.answer("✅ تم إرسال القوانين", show_alert=True)
         elif أمر == "قفل":
             try:
                 await context.bot.set_chat_permissions(chat_id, ChatPermissions(can_send_messages=False))
@@ -519,7 +697,11 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
                 await query.answer(f"❌ {e}", show_alert=True)
         elif أمر == "فتح":
             try:
-                await context.bot.set_chat_permissions(chat_id, ChatPermissions(can_send_messages=True, can_send_polls=True, can_send_other_messages=True, can_add_web_page_previews=True, can_invite_users=True))
+                await context.bot.set_chat_permissions(chat_id, ChatPermissions(
+                    can_send_messages=True, can_send_polls=True,
+                    can_send_other_messages=True, can_add_web_page_previews=True,
+                    can_invite_users=True
+                ))
                 await context.bot.send_message(chat_id, "🔓 *تم فتح الجروب*", parse_mode="Markdown")
                 await query.answer("✅ تم الفتح.", show_alert=True)
             except Exception as e:
@@ -527,18 +709,29 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
         elif أمر == "ai":
             مفعل = await ai_مفعل_للجروب(chat_id)
             if مفعل:
-                await query.edit_message_text("🤖 *AI مفعّل في جروبك!*\n\nالأعضاء يقدروا يسألوا البوت أي سؤال.", parse_mode="Markdown", reply_markup=قائمة_تحكم_جروب(chat_id))
+                await query.edit_message_text(
+                    "✅ *AI مفعّل في جروبك!*\n\nالأعضاء يقدروا يسألوا البوت أي سؤال 🤖",
+                    parse_mode="Markdown",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔴 وقف AI", callback_data=f"stop_ai_{chat_id}")],
+                        [InlineKeyboardButton("🔙 رجوع", callback_data=f"myjrp_{chat_id}")],
+                    ])
+                )
             else:
+                سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}/شهر" if سعر_الاشتراك['قيمة'] else "تواصل مع الأدمن للسعر"
                 if supabase:
                     try:
                         e = supabase.table("اشتراكات").select("id").eq("user_id", م.id).eq("chat_id", chat_id).execute()
                         if not e.data:
                             supabase.table("اشتراكات").insert({"user_id": م.id, "chat_id": chat_id, "الاسم": م.first_name, "ai_مفعل": False}).execute()
+                        else:
+                            supabase.table("اشتراكات").update({"user_id": م.id, "الاسم": م.first_name}).eq("chat_id", chat_id).execute()
                     except: pass
                 try:
+                    ي = f"@{م.username}" if م.username else "مفيش يوزرنيم"
                     await context.bot.send_message(
                         OWNER_ID,
-                        f"💰 *طلب اشتراك AI!*\n\n👤 {م.first_name}\n🆔 `{م.id}`\n🏘 جروب: `{chat_id}`",
+                        f"💰 *طلب اشتراك AI!*\n\n👤 {م.first_name}\n🔗 {ي}\n🆔 `{م.id}`\n🏘 جروب: `{chat_id}`",
                         parse_mode="Markdown",
                         reply_markup=InlineKeyboardMarkup([[
                             InlineKeyboardButton("✅ فعّل", callback_data=f"activate_{م.id}_{chat_id}"),
@@ -547,43 +740,22 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
                     )
                 except: pass
                 await query.edit_message_text(
-                    "🤖 *اشتراك الذكاء الاصطناعي*\n\n"
-                    "للاشتراك:\n"
-                    "1️⃣ ابعت المبلغ على فودافون كاش\n"
-                    "2️⃣ ابعت إيصال الدفع للأدمن\n"
-                    "3️⃣ سيتم التفعيل خلال ساعة\n\n"
-                    "📱 *رقم فودافون كاش:*01065631855\n\n"
+                    f"🤖 *اشتراك الذكاء الاصطناعي*\n\n"
+                    f"💰 السعر: {سعر_نص}\n\n"
+                    f"📱 *ابعت على فودافون كاش:*\n`{VODAFONE_NUMBER}`\n\n"
+                    f"بعد الدفع تواصل مع {OWNER_USERNAME} وابعتله إيصال الدفع\n\n"
                     "✅ تم إرسال طلبك للأدمن!",
                     parse_mode="Markdown",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data=f"grp_إحصائيات_{chat_id}")]])
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data=f"myjrp_{chat_id}")]])
                 )
         return
 
-    # ===== قائمة عامة =====
-    if بيانات == "رئيسية":
-        await query.edit_message_text("اختار من القائمة 👇", reply_markup=القائمة_الرئيسية())
+    # ===== وقف AI =====
+    if بيانات.startswith("stop_ai_") and م.id == OWNER_ID:
+        chat_id = int(بيانات.replace("stop_ai_", ""))
+        await وقف_ai(chat_id)
+        await query.answer("✅ تم وقف AI", show_alert=True)
         return
-
-    if بيانات == "إحصائيات":
-        إحصاء = await جيب_إحصائيات()
-        await query.edit_message_text(
-            f"📊 *إحصائيات*\n\n👥 {إحصاء['مستخدمين'] if إحصاء else 0} مستخدم\n🏘 {إحصاء['جروبات'] if إحصاء else 0} جروب",
-            parse_mode="Markdown", reply_markup=القائمة_الرئيسية()
-        )
-        return
-
-    نصوص = {
-        "مساعدة": "📖 *دليل الاستخدام*\n\nرد على رسالة العضو واكتب:\nحظر | فك حظر | كتم | فك كتم | تحذير | مسح\n\n📚 ارفع ملف Excel في الجروب للأسئلة\n🎛 /ctrl للوحة التحكم",
-        "قوانين": قوانين_الجروب,
-        "حظر": "🔨 رد على رسالة العضو واكتب: *حظر*",
-        "فك_حظر": "🔓 رد على رسالة العضو واكتب: *فك حظر*",
-        "كتم": "🔇 رد على رسالة العضو واكتب: *كتم*",
-        "فك_كتم": "🔊 رد على رسالة العضو واكتب: *فك كتم*",
-        "تحذير": "⚠️ رد على رسالة العضو واكتب: *تحذير*\n3 تحذيرات = حظر تلقائي",
-        "مسح": "🗑 رد على الرسالة واكتب: *مسح*",
-    }
-    if بيانات in نصوص:
-        await query.edit_message_text(نصوص[بيانات], parse_mode="Markdown", reply_markup=القائمة_الرئيسية())
 
 
 async def معالج_الملفات(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -600,8 +772,7 @@ async def معالج_الملفات(update: Update, context: ContextTypes.DEFAUL
     file_bytes = await file.download_as_bytearray()
     أسئلة = قراءة_أسئلة(bytes(file_bytes))
     if أسئلة:
-        بيانات_جروب = جيب_بيانات_جروب(ش.id)
-        بيانات_جروب["أسئلة"] = أسئلة
+        جيب_بيانات_جروب(ش.id)["أسئلة"] = أسئلة
         context.user_data['انتظر_مادة'] = True
         context.user_data['chat_id_أسئلة'] = ش.id
         await update.message.reply_text(f"✅ تم رفع *{len(أسئلة)}* سؤال!\n\n📚 ما اسم المادة؟", parse_mode="Markdown")
@@ -620,7 +791,7 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
     م = update.effective_user
     ش = update.effective_chat
 
-    # ===== السوبر أدمن في الخاص =====
+    # ===== السوبر أدمن =====
     if في_الخاص and م.id == OWNER_ID:
         if context.user_data.get("انتظر_إعلان"):
             context.user_data["انتظر_إعلان"] = False
@@ -639,6 +810,22 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                 await update.message.reply_text(f"❌ {e}")
             return
 
+        if context.user_data.get("انتظر_سعر"):
+            context.user_data["انتظر_سعر"] = False
+            # استخراج الرقم والعملة
+            match = re.match(r'(\d+)\s*(.*)', نص)
+            if match:
+                سعر_الاشتراك["قيمة"] = int(match.group(1))
+                سعر_الاشتراك["العملة"] = match.group(2).strip() or "جنيه"
+                await update.message.reply_text(
+                    f"✅ تم تحديد السعر: *{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}/شهر*",
+                    parse_mode="Markdown", reply_markup=قائمة_سوبر_أدمن()
+                )
+            else:
+                await update.message.reply_text("❌ صيغة غلط. اكتب مثلاً: `50 جنيه`", reply_markup=قائمة_سوبر_أدمن())
+            return
+
+        # تفعيل يدوي
         match = re.match(r'تفعيل (\d+) (-?\d+)', نص)
         if match:
             uid, cid = int(match.group(1)), int(match.group(2))
@@ -651,17 +838,12 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                 await update.message.reply_text("❌ فشل التفعيل")
             return
 
-        match = re.match(r'وقف_ai (\d+) (-?\d+)', نص)
+        # وقف AI
+        match = re.match(r'وقف_ai (-?\d+)', نص)
         if match:
-            uid, cid = int(match.group(1)), int(match.group(2))
-            await وقف_ai(uid, cid)
-            await update.message.reply_text(f"✅ تم وقف AI للمستخدم {uid}")
-            return
-
-        if نص in ["جروبات", "جروبات البوت"]:
-            جروبات = await جيب_كل_الجروبات()
-            نص_ج = "🏘 *الجروبات:*\n\n" + "\n".join(f"{i}. {ج.get('اسم','؟')} — `{ج['chat_id']}`" for i, ج in enumerate(جروبات, 1)) if جروبات else "❌ مفيش جروبات"
-            await update.message.reply_text(نص_ج, parse_mode="Markdown")
+            cid = int(match.group(1))
+            await وقف_ai(cid)
+            await update.message.reply_text(f"✅ تم وقف AI للجروب {cid}")
             return
 
     # ===== انتظار اسم المادة =====
@@ -680,17 +862,28 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
         دقائق = int(نص)
         بيانات_جروب["info"]["كل_دقايق"] = دقائق
         context.user_data['انتظر_وقت'] = False
-        for job in (context.job_queue.get_jobs_by_name(f"أسئلة_{chat_id}") + context.job_queue.get_jobs_by_name(f"تحفيز_{chat_id}") + context.job_queue.get_jobs_by_name(f"أذكار_{chat_id}")):
+        for job in (
+            context.job_queue.get_jobs_by_name(f"أسئلة_{chat_id}") +
+            context.job_queue.get_jobs_by_name(f"تحفيز_{chat_id}") +
+            context.job_queue.get_jobs_by_name(f"أذكار_{chat_id}")
+        ):
             job.schedule_removal()
         بيانات_جروب["مخلوطة"] = بيانات_جروب["أسئلة"].copy()
         random.shuffle(بيانات_جروب["مخلوطة"])
         بيانات_جروب["index"] = 0
         بيانات_جروب["إحصائيات"] = {"أسئلة_بُعتت": 0}
-        context.job_queue.run_once(بدء_المعسكر, 5, data={"chat_id": chat_id, "اسم_المادة": بيانات_جروب["info"]["اسم_المادة"], "عدد_أسئلة": len(بيانات_جروب["أسئلة"]), "كل_دقايق": دقائق}, name=f"بدء_{chat_id}")
+        context.job_queue.run_once(
+            بدء_المعسكر, 5,
+            data={"chat_id": chat_id, "اسم_المادة": بيانات_جروب["info"]["اسم_المادة"], "عدد_أسئلة": len(بيانات_جروب["أسئلة"]), "كل_دقايق": دقائق},
+            name=f"بدء_{chat_id}"
+        )
         context.job_queue.run_repeating(إرسال_سؤال, interval=دقائق * 60, first=15, data={"chat_id": chat_id}, name=f"أسئلة_{chat_id}")
         context.job_queue.run_repeating(إرسال_تحفيز, interval=دقائق * 60 * 2, first=دقائق * 60, data={"chat_id": chat_id}, name=f"تحفيز_{chat_id}")
         context.job_queue.run_repeating(إرسال_ذكر, interval=15 * 60, first=15 * 60, data={"chat_id": chat_id}, name=f"أذكار_{chat_id}")
-        await update.message.reply_text(f"🏕️ *المعسكر جاهز!*\n\n📚 {بيانات_جروب['info']['اسم_المادة']}\n⏱️ سؤال كل {دقائق} دقيقة\n\nسيبدأ خلال ثواني 🚀", parse_mode="Markdown")
+        await update.message.reply_text(
+            f"🏕️ *المعسكر جاهز!*\n\n📚 {بيانات_جروب['info']['اسم_المادة']}\n⏱️ سؤال كل {دقائق} دقيقة\n\nسيبدأ خلال ثواني 🚀",
+            parse_mode="Markdown"
+        )
         return
 
     # ===== فلتر تلقائي =====
@@ -782,7 +975,8 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
         if not في_الخاص and not await ai_مفعل_للجروب(ش.id):
             if اتذكر or فيه_سؤال:
                 await update.message.reply_text(
-                    "🤖 الذكاء الاصطناعي للمشتركين فقط.\nاكتب /ctrl واختار *اشتراك AI* 💎",
+                    f"🤖 الذكاء الاصطناعي للمشتركين فقط 💎\n"
+                    f"تواصل مع {OWNER_USERNAME} للاشتراك",
                     parse_mode="Markdown"
                 )
             return
