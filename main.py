@@ -125,11 +125,21 @@ async def سجل_جروب(chat_id, اسم, owner_id):
     try:
         e = supabase.table("جروبات").select("id").eq("chat_id", chat_id).execute()
         if not e.data:
-            supabase.table("جروبات").insert({"chat_id": chat_id, "اسم": اسم, "owner_id": owner_id}).execute()
+            supabase.table("جروبات").insert({
+                "chat_id": chat_id,
+                "اسم": اسم,
+                "owner_id": owner_id,
+                "عدد_الأعضاء": 0,
+                "تاريخ_الإضافة": "now()"
+            }).execute()
+            logging.info(f"✅ تم تسجيل جروب: {chat_id}")
         else:
-            supabase.table("جروبات").update({"اسم": اسم, "owner_id": owner_id}).eq("chat_id", chat_id).execute()
+            supabase.table("جروبات").update({
+                "اسم": اسم,
+                "owner_id": owner_id
+            }).eq("chat_id", chat_id).execute()
     except Exception as ex:
-        logging.error(f"سجل_جروب: {ex}")
+        logging.error(f"سجل_جروب ERROR: {ex}")
 
 async def جيب_جروبات_المستخدم(user_id):
     if not supabase: return []
