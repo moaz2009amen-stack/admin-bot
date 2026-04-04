@@ -17,7 +17,7 @@ OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 
 OWNER_USERNAME = "@Almoo5m"
 VODAFONE_NUMBER = "01065631855"
-سعر_الاشتراك = {"قيمة": 0, "العملة": "جنيه"}  # يتحدد من لوحة التحكم
+سعر_الاشتراك = {"قيمة": 0, "العملة": "جنيه"}
 
 groq_client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
@@ -80,7 +80,8 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
     "• البوت يبعت أسئلة تلقائي!\n\n"
     "🔧 *أوامر مفيدة:*\n"
     "• `قوانين` — عرض قوانين الجروب\n"
-    "• `chat_id` — معرفة ID الجروب\n\n"
+    "• `chat_id` — معرفة ID الجروب\n"
+    "• /ctrl — لوحة تحكم الجروب\n\n"
     "━━━━━━━━━━━━━━━━━━\n"
     "💎 *الميزات البريميوم (AI):*\n"
     "━━━━━━━━━━━━━━━━━━\n\n"
@@ -132,7 +133,7 @@ async def سجل_جروب(chat_id, اسم, owner_id):
                 "عدد_الأعضاء": 0,
                 "تاريخ_الإضافة": "now()"
             }).execute()
-            logging.info(f"✅ تم تسجيل جروب: {chat_id}")
+            logging.info(f"✅ تم تسجيل جروب: {chat_id} owner: {owner_id}")
         else:
             supabase.table("جروبات").update({
                 "اسم": اسم,
@@ -159,9 +160,7 @@ async def ai_مفعل_للجروب(chat_id):
     if not supabase: return False
     try:
         r = supabase.table("اشتراكات").select("ai_مفعل").eq("chat_id", chat_id).execute()
-        if r.data:
-            return bool(r.data[0]["ai_مفعل"])
-        return False
+        return bool(r.data[0]["ai_مفعل"]) if r.data else False
     except: return False
 
 async def فعّل_ai(user_id, chat_id):
@@ -172,9 +171,10 @@ async def فعّل_ai(user_id, chat_id):
             supabase.table("اشتراكات").update({"ai_مفعل": True, "user_id": user_id}).eq("chat_id", chat_id).execute()
         else:
             supabase.table("اشتراكات").insert({"user_id": user_id, "chat_id": chat_id, "ai_مفعل": True}).execute()
+        logging.info(f"✅ تم تفعيل AI للجروب: {chat_id}")
         return True
     except Exception as ex:
-        logging.error(f"فعّل_ai: {ex}")
+        logging.error(f"فعّل_ai ERROR: {ex}")
         return False
 
 async def وقف_ai(chat_id):
@@ -227,10 +227,10 @@ def قائمة_جروبات_المستخدم(جروبات):
     أزرار = []
     for ج in جروبات:
         أزرار.append([InlineKeyboardButton(f"🏘 {ج.get('اسم', 'جروب')}", callback_data=f"myjrp_{ج['chat_id']}")])
-    أزرار.append([InlineKeyboardButton("🔄 تحديث", callback_data="my_جروبات")])
+    أزرار.append([InlineKeyboardButton("🔄 تحديث", callback_data="my_جروبات"), InlineKeyboardButton("📖 الدليل", callback_data="دليل")])
     return InlineKeyboardMarkup(أزرار)
 
-def قائمة_تحكم_جروب(chat_id, اسم="الجروب"):
+def قائمة_تحكم_جروب(chat_id):
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("❓ سؤال الآن", callback_data=f"grp_سؤال_{chat_id}"), InlineKeyboardButton("⏹ وقف المعسكر", callback_data=f"grp_وقف_{chat_id}")],
         [InlineKeyboardButton("📊 إحصائيات", callback_data=f"grp_إحصائيات_{chat_id}"), InlineKeyboardButton("📋 القوانين", callback_data=f"grp_قوانين_{chat_id}")],
@@ -287,13 +287,23 @@ def جيب_بيانات_جروب(chat_id):
         }
     return معسكرات[chat_id]
 
+async def تسجيل_جروب_تلقائي(chat_id, title, context):
+    """يتسجل الجروب من أي رسالة بتيجي منه"""
+    try:
+        أعضاء = await context.bot.get_chat_administrators(chat_id)
+        owner = next((a.user.id for a in أعضاء if a.status == "creator"), None)
+        await سجل_جروب(chat_id, title or "جروب", owner)
+    except Exception as e:
+        logging.error(f"تسجيل_جروب_تلقائي: {e}")
+
 
 # ==================== دوال المعسكر ====================
 async def بدء_المعسكر(context: ContextTypes.DEFAULT_TYPE):
     data = context.job.data
     await context.bot.send_message(
         data["chat_id"],
-        f"🏕️ *معسكر أسئلة جديد!*\n\n📚 *المادة:* {data['اسم_المادة']}\n"
+        f"🏕️ *معسكر أسئلة جديد!*\n\n"
+        f"📚 *المادة:* {data['اسم_المادة']}\n"
         f"📝 *عدد الأسئلة:* {data['عدد_أسئلة']} سؤال\n"
         f"⏱️ *سؤال كل:* {data['كل_دقايق']} دقيقة\n\n"
         "🤲 اللهم علمنا ما ينفعنا وانفعنا بما علمتنا\n\nيلا نذاكر! 💪🔥",
@@ -303,7 +313,8 @@ async def بدء_المعسكر(context: ContextTypes.DEFAULT_TYPE):
 async def نهاية_المعسكر(context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         context.job.data["chat_id"],
-        "🏆 *انتهى المعسكر!*\n\nبارك الله فيكم 🌟\n\n🤲 اللهم اجعل ما تعلمناه نافعاً\n\nالحمد لله الذي بنعمته تتم الصالحات 🌹",
+        "🏆 *انتهى المعسكر!*\n\nبارك الله فيكم 🌟\n\n"
+        "🤲 اللهم اجعل ما تعلمناه نافعاً\n\nالحمد لله الذي بنعمته تتم الصالحات 🌹",
         parse_mode="Markdown"
     )
 
@@ -360,14 +371,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # إشعار للأونر
     if OWNER_ID != 0:
         ي = f"@{م.username}" if م.username else "مفيش يوزرنيم"
         try:
             await context.bot.send_message(OWNER_ID, f"🆕 *مستخدم جديد!*\n\n👤 {م.first_name}\n🔗 {ي}\n🆔 `{م.id}`", parse_mode="Markdown")
         except: pass
 
-    # جيب جروبات المستخدم
     جروبات = await جيب_جروبات_المستخدم(م.id)
     سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}" if سعر_الاشتراك['قيمة'] else ""
 
@@ -384,7 +393,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(رسالة, parse_mode="Markdown", reply_markup=قائمة_جروبات_المستخدم(جروبات))
     else:
         await update.message.reply_text(
-            رسالة + "\n\n⚠️ *ضيف البوت في جروبك الأول عشان تقدر تتحكم فيه من هنا*",
+            رسالة + "\n\n⚠️ *ضيف البوت في جروبك وابعت أي رسالة هناك عشان يظهر هنا*",
             parse_mode="Markdown",
             reply_markup=القائمة_الرئيسية_مستخدم()
         )
@@ -393,7 +402,6 @@ async def ctrl(update: Update, context: ContextTypes.DEFAULT_TYPE):
     م = update.effective_user
     ش = update.effective_chat
 
-    # السوبر أدمن في الخاص
     if م.id == OWNER_ID and ش.type == "private":
         إحصاء = await جيب_إحصائيات()
         await update.message.reply_text(
@@ -405,19 +413,19 @@ async def ctrl(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # في الجروب
     if ش.type != "private":
         if not await هو_ادمن(update, context):
             await update.message.reply_text("❌ للأدمن فقط.")
             return
+        # تسجيل الجروب تلقائي
+        await تسجيل_جروب_تلقائي(ش.id, ش.title, context)
         await update.message.reply_text(
             f"🎛 *لوحة تحكم {ش.title}*\n\nارفع ملف Excel للأسئلة هنا 👇",
             parse_mode="Markdown",
-            reply_markup=قائمة_تحكم_جروب(ش.id, ش.title)
+            reply_markup=قائمة_تحكم_جروب(ش.id)
         )
         return
 
-    # مستخدم عادي في الخاص
     await update.message.reply_text("استخدم /start للتحكم في جروباتك 👇")
 
 async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -427,28 +435,12 @@ async def ترحيب_عضو_جديد(update: Update, context: ContextTypes.DEFAU
     بوت = await context.bot.get_me()
 
     if ع.id == بوت.id:
-        try:
-            أعضاء = await context.bot.get_chat_administrators(ش.id)
-            owner_id = next((a.user.id for a in أعضاء if a.status == "creator"), None)
-        except:
-            owner_id = None
-        await سجل_جروب(ش.id, ش.title or "جروب", owner_id)
+        await تسجيل_جروب_تلقائي(ش.id, ش.title, context)
         if OWNER_ID != 0:
             try:
                 await context.bot.send_message(
                     OWNER_ID,
-                    f"➕ *جروب جديد!*\n\n📛 {ش.title}\n🆔 `{ش.id}`\n👤 الأونر: `{owner_id}`",
-                    parse_mode="Markdown"
-                )
-            except: pass
-        # إرسال الدليل للأونر في الخاص
-        if owner_id:
-            try:
-                await context.bot.send_message(
-                    owner_id,
-                    f"🎉 *تم إضافة بووووو في {ش.title}!*\n\n"
-                    "دلوقتي تقدر تتحكم في الجروب من هنا مباشرة 👇\n\n"
-                    "اكتب /start لتشغيل لوحة التحكم",
+                    f"➕ *جروب جديد!*\n\n📛 {ش.title}\n🆔 `{ش.id}`",
                     parse_mode="Markdown"
                 )
             except: pass
@@ -539,7 +531,11 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
             إحصاء = await جيب_إحصائيات()
             سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}" if سعر_الاشتراك['قيمة'] else "غير محدد"
             await query.edit_message_text(
-                f"👑 *لوحة السوبر أدمن*\n\n👥 {إحصاء.get('مستخدمين',0)} مستخدم\n🏘 {إحصاء.get('جروبات',0)} جروب\n🤖 {إحصاء.get('مشتركين_ai',0)} مشترك AI\n💰 السعر: {سعر_نص}",
+                f"👑 *لوحة السوبر أدمن*\n\n"
+                f"👥 {إحصاء.get('مستخدمين',0)} مستخدم\n"
+                f"🏘 {إحصاء.get('جروبات',0)} جروب\n"
+                f"🤖 {إحصاء.get('مشتركين_ai',0)} مشترك AI\n"
+                f"💰 السعر: {سعر_نص}",
                 parse_mode="Markdown", reply_markup=قائمة_سوبر_أدمن()
             )
         return
@@ -581,7 +577,8 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
         جروبات = await جيب_جروبات_المستخدم(م.id)
         if not جروبات:
             await query.edit_message_text(
-                "❌ *مش لاقي جروبات ليك*\n\nضيف البوت في جروبك الأول!",
+                "❌ *مش لاقي جروبات ليك*\n\n"
+                "ضيف البوت في جروبك وابعت أي رسالة هناك عشان يظهر هنا",
                 parse_mode="Markdown",
                 reply_markup=القائمة_الرئيسية_مستخدم()
             )
@@ -595,12 +592,10 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
 
     if بيانات.startswith("myjrp_"):
         chat_id = int(بيانات.replace("myjrp_", ""))
-        # التحقق إن المستخدم فعلاً أونر الجروب ده
         owner = await جيب_owner_id(chat_id)
         if owner != م.id and م.id != OWNER_ID:
             await query.answer("❌ مش أونر الجروب ده!", show_alert=True)
             return
-        # جيب اسم الجروب
         try:
             chat_info = await context.bot.get_chat(chat_id)
             اسم = chat_info.title or "الجروب"
@@ -609,7 +604,7 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
         await query.edit_message_text(
             f"🎛 *لوحة تحكم {اسم}*\n\nاختار الأمر 👇",
             parse_mode="Markdown",
-            reply_markup=قائمة_تحكم_جروب(chat_id, اسم)
+            reply_markup=قائمة_تحكم_جروب(chat_id)
         )
         return
 
@@ -626,12 +621,6 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
     # ===== طلب اشتراك AI من الخاص =====
     if بيانات == "اشتراك_ai":
         سعر_نص = f"{سعر_الاشتراك['قيمة']} {سعر_الاشتراك['العملة']}/شهر" if سعر_الاشتراك['قيمة'] else "تواصل مع الأدمن"
-        if supabase:
-            try:
-                e = supabase.table("اشتراكات").select("id").eq("user_id", م.id).execute()
-                if not e.data:
-                    supabase.table("اشتراكات").insert({"user_id": م.id, "chat_id": 0, "الاسم": م.first_name, "ai_مفعل": False}).execute()
-            except: pass
         try:
             ي = f"@{م.username}" if م.username else "مفيش يوزرنيم"
             await context.bot.send_message(
@@ -658,7 +647,6 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
         chat_id = int(parts[1]) if len(parts) > 1 else None
         if not chat_id: return
 
-        # التحقق من الصلاحية
         owner = await جيب_owner_id(chat_id)
         if م.id != owner and م.id != OWNER_ID:
             try:
@@ -735,7 +723,7 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
                         if not e.data:
                             supabase.table("اشتراكات").insert({"user_id": م.id, "chat_id": chat_id, "الاسم": م.first_name, "ai_مفعل": False}).execute()
                         else:
-                            supabase.table("اشتراكات").update({"user_id": م.id, "الاسم": م.first_name}).eq("chat_id", chat_id).execute()
+                            supabase.table("اشتراكات").update({"user_id": م.id}).eq("chat_id", chat_id).execute()
                     except: pass
                 try:
                     ي = f"@{م.username}" if م.username else "مفيش يوزرنيم"
@@ -801,6 +789,10 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
     م = update.effective_user
     ش = update.effective_chat
 
+    # ===== تسجيل الجروب تلقائي من أي رسالة =====
+    if not في_الخاص:
+        await تسجيل_جروب_تلقائي(ش.id, ش.title, context)
+
     # ===== السوبر أدمن =====
     if في_الخاص and م.id == OWNER_ID:
         if context.user_data.get("انتظر_إعلان"):
@@ -822,7 +814,6 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
 
         if context.user_data.get("انتظر_سعر"):
             context.user_data["انتظر_سعر"] = False
-            # استخراج الرقم والعملة
             match = re.match(r'(\d+)\s*(.*)', نص)
             if match:
                 سعر_الاشتراك["قيمة"] = int(match.group(1))
@@ -832,10 +823,9 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                     parse_mode="Markdown", reply_markup=قائمة_سوبر_أدمن()
                 )
             else:
-                await update.message.reply_text("❌ صيغة غلط. اكتب مثلاً: `50 جنيه`", reply_markup=قائمة_سوبر_أدمن())
+                await update.message.reply_text("❌ صيغة غلط. مثال: `50 جنيه`", reply_markup=قائمة_سوبر_أدمن())
             return
 
-        # تفعيل يدوي
         match = re.match(r'تفعيل (\d+) (-?\d+)', نص)
         if match:
             uid, cid = int(match.group(1)), int(match.group(2))
@@ -848,7 +838,6 @@ async def معالج_الرسائل(update: Update, context: ContextTypes.DEFAUL
                 await update.message.reply_text("❌ فشل التفعيل")
             return
 
-        # وقف AI
         match = re.match(r'وقف_ai (-?\d+)', نص)
         if match:
             cid = int(match.group(1))
