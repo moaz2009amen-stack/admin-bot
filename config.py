@@ -1,6 +1,7 @@
 import os
 
 TOKEN = os.environ.get("TOKEN")
+DEEPSEEK_KEY = os.environ.get("DEEPSEEK_KEY")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
