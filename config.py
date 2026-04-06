@@ -1,7 +1,6 @@
 import os
 
 TOKEN = os.environ.get("TOKEN")
-OPENROUTER_KEY = os.environ.get("OPENROUTER_KEY")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
