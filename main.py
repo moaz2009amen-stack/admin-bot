@@ -1,42 +1,66 @@
+import httpx
 import logging
-from datetime import time
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, CallbackQueryHandler,
-    MessageHandler, ChatMemberHandler, filters,
-)
-from config import TOKEN
-from handlers import (
-    start, ctrl, prompt_command, help_command, setup_commands,
-    ترحيب_عضو_جديد, معالج_الأزرار, معالج_الملفات, معالج_الرسائل,
-    تقرير_يومي
-)
-from telegram import Update
+from config import OPENROUTER_KEY, اسم_الصانع
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
+SYSTEM_PROMPT = f"""أنت مساعد ذكي متخصص في مساعدة الطلاب على المذاكرة، اسمك بووووو وصنعك {اسم_الصانع}.
 
-def main():
-    if not TOKEN:
-        raise ValueError("مفيش TOKEN في الـ environment variables!")
+قواعدك:
+- تتكلم بالعامية المصرية دايماً
+- متخصص في شرح المناهج الدراسية
+- لو حد سألك سؤال دراسي: اشرحه بأسلوب بسيط وأمثلة
+- لو حد طلب تلخيص: لخص بنقاط واضحة
+- لو حد عايز أسئلة: اعمله أسئلة مع الإجابات
+- لو حد سألك مين صنعك: قوله {اسم_الصانع}
+- ردودك تكون مفيدة وخفيفة وتشجع على المذاكرة"""
 
-    تطبيق = ApplicationBuilder().token(TOKEN).post_init(setup_commands).build()
+# نجرب أكتر من موديل لو واحد فشل
+MODELS = [
+    "deepseek/deepseek-chat-v3-0324:free",
+    "deepseek/deepseek-r1:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemma-3-27b-it:free",
+]
 
-    تطبيق.add_handler(CommandHandler("start", start))
-    تطبيق.add_handler(CommandHandler("ctrl", ctrl))
-    تطبيق.add_handler(CommandHandler("prompt", prompt_command))
-    تطبيق.add_handler(CommandHandler("help", help_command))
-    تطبيق.add_handler(ChatMemberHandler(ترحيب_عضو_جديد, ChatMemberHandler.CHAT_MEMBER))
-    تطبيق.add_handler(CallbackQueryHandler(معالج_الأزرار))
-    تطبيق.add_handler(MessageHandler(filters.Document.ALL, معالج_الملفات))
-    تطبيق.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, معالج_الرسائل))
+async def اسأل_ai(سؤال: str) -> str:
+    if not OPENROUTER_KEY:
+        logging.error("OPENROUTER_KEY مش موجود!")
+        return "❌ الـ AI مش متاح دلوقتي."
 
-    # تقرير يومي الساعة 8 صباحاً بتوقيت القاهرة
-    تطبيق.job_queue.run_daily(تقرير_يومي, time=time(5, 0))
+    for model in MODELS:
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                r = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {OPENROUTER_KEY}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://t.me",
+                        "X-Title": "بووووو بوت",
+                    },
+                    json={
+                        "model": model,
+                        "messages": [
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": سؤال}
+                        ],
+                        "max_tokens": 1000,
+                    }
+                )
+                data = r.json()
+                logging.info(f"OpenRouter response ({model}): {r.status_code}")
 
-    print("✅ البوت شغال...")
-    تطبيق.run_polling(allowed_updates=Update.ALL_TYPES)
+                if "choices" in data and data["choices"]:
+                    رد = data["choices"][0]["message"]["content"]
+                    if رد and رد.strip():
+                        return رد.strip()
 
-if __name__ == "__main__":
-    main()
+                # لو في error ف الـ response
+                if "error" in data:
+                    logging.warning(f"Model {model} error: {data['error']}")
+                    continue
+
+        except Exception as e:
+            logging.error(f"AI error ({model}): {e}")
+            continue
+
+    return "❌ مش قادر أجاوب دلوقتي، جرب تاني بعد شوية."
