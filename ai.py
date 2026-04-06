@@ -15,8 +15,8 @@ SYSTEM_PROMPT = f"""أنت مساعد ذكي متخصص في مساعدة الط
 """
 
 async def اسأل_ai(سؤال: str) -> str:
-    if not OPENROUTER_KEY:
-        return "❌ الـ AI مش متاح دلوقتي."
+if not DEEPSEEK_KEY:
+    return "❌ الـ AI مش متاح دلوقتي."
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.post(
