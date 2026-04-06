@@ -1,6 +1,6 @@
 import httpx
 import logging
-from config import OPENROUTER_KEY, اسم_الصانع
+from config import  اسم_الصانع
 
 SYSTEM_PROMPT = f"""أنت مساعد ذكي متخصص في مساعدة الطلاب على المذاكرة، اسمك بووووو وصنعك {اسم_الصانع}.
 
