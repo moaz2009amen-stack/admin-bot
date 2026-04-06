@@ -1,9 +1,11 @@
+import os
 import httpx
 import logging
-from config import  اسم_الصانع
+from config import اسم_الصانع
+
+DEEPSEEK_KEY = os.environ.get("DEEPSEEK_KEY")
 
 SYSTEM_PROMPT = f"""أنت مساعد ذكي متخصص في مساعدة الطلاب على المذاكرة، اسمك بووووو وصنعك {اسم_الصانع}.
-
 قواعدك:
 - تتكلم بالعامية المصرية دايماً
 - متخصص في شرح المناهج الدراسية
@@ -11,23 +13,22 @@ SYSTEM_PROMPT = f"""أنت مساعد ذكي متخصص في مساعدة الط
 - لو حد طلب تلخيص: لخص بنقاط واضحة
 - لو حد عايز أسئلة: اعمله أسئلة مع الإجابات
 - لو حد سألك مين صنعك: قوله {اسم_الصانع}
-- ردودك تكون مفيدة وخفيفة وتشجع على المذاكرة
-"""
+- ردودك تكون مفيدة وخفيفة وتشجع على المذاكرة"""
 
 async def اسأل_ai(سؤال: str) -> str:
-if not DEEPSEEK_KEY:
-    return "❌ الـ AI مش متاح دلوقتي."
+    if not DEEPSEEK_KEY:
+        logging.error("DEEPSEEK_KEY مش موجود!")
+        return "❌ الـ AI مش متاح دلوقتي."
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
+                "https://api.deepseek.com/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {OPENROUTER_KEY}",
+                    "Authorization": f"Bearer {DEEPSEEK_KEY}",
                     "Content-Type": "application/json",
-                    "HTTP-Referer": "https://t.me/bot",
                 },
                 json={
-                    "model": "deepseek/deepseek-chat-v3-0324:free",
+                    "model": "deepseek-chat",
                     "messages": [
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": سؤال}
@@ -36,10 +37,11 @@ if not DEEPSEEK_KEY:
                 }
             )
             data = r.json()
-            if "choices" in data:
-                return data["choices"][0]["message"]["content"]
-            logging.error(f"OpenRouter response: {data}")
+            logging.info(f"Deepseek status: {r.status_code}")
+            if "choices" in data and data["choices"]:
+                return data["choices"][0]["message"]["content"].strip()
+            logging.error(f"Deepseek error: {data}")
             return "❌ مش قادر أجاوب دلوقتي، جرب تاني."
     except Exception as e:
-        logging.error(f"AI error: {e}")
+        logging.error(f"Deepseek error: {e}")
         return "❌ في مشكلة في الاتصال، جرب تاني."
