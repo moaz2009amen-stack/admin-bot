@@ -433,10 +433,27 @@ async def معالج_الأزرار(update: Update, context: ContextTypes.DEFAUL
                 context.job_queue.run_once(إرسال_سؤال, 1, data={"chat_id": chat_id}, name=f"فوري_{chat_id}")
                 await query.answer("✅ تم إرسال سؤال!", show_alert=True)
         elif أمر == "وقف":
-            for job in (context.job_queue.get_jobs_by_name(f"أسئلة_{chat_id}") + context.job_queue.get_jobs_by_name(f"تحفيز_{chat_id}") + context.job_queue.get_jobs_by_name(f"أذكار_{chat_id}")):
-                job.schedule_removal()
-            context.job_queue.run_once(نهاية_المعسكر, 2, data={"chat_id": chat_id}, name=f"نهاية_{chat_id}")
-            await query.answer("✅ تم إنهاء المعسكر.", show_alert=True)
+            # وقف كل الـ jobs المتعلقة بالجروب ده
+            كل_الـ_jobs = context.job_queue.jobs()
+            عدد = 0
+            for job in كل_الـ_jobs:
+                if job.name and str(chat_id) in job.name:
+                    job.schedule_removal()
+                    عدد += 1
+            # reset بيانات الجروب
+            from camp import جيب_بيانات_جروب
+            بيانات = جيب_بيانات_جروب(chat_id)
+            بيانات["index"] = 0
+            بيانات["مخلوطة"] = []
+            # بعت رسالة نهاية المعسكر
+            try:
+                await context.bot.send_message(
+                    chat_id,
+                    "⏹ *تم إيقاف المعسكر*\n\nالحمد لله الذي بنعمته تتم الصالحات 🌹",
+                    parse_mode="Markdown"
+                )
+            except: pass
+            await query.answer(f"✅ تم إنهاء المعسكر ({عدد} مهام وقفت)", show_alert=True)
         elif أمر == "قوانين":
             await context.bot.send_message(chat_id, قوانين_الجروب, parse_mode="Markdown")
             await query.answer("✅ تم", show_alert=True)
